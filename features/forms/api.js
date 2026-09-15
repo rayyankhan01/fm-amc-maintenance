@@ -93,3 +93,32 @@ export async function submitInspection(supabase, input) {
 
   return submission.id;
 }
+export async function createTemplate(supabase, input) {
+  const { data, error } = await supabase
+    .from('form_templates')
+    .insert(input)
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return data.id;
+}
+
+/**
+ * Adds a field to a form template.
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {{ template_id: string, field_type: string, section: string | null, label: string, sort_order: number, is_mandatory: boolean }} input
+ * @returns {Promise<string>} the new field id
+ */
+
+export async function addFormField(supabase,input){
+    const {data,error}= await supabase
+    .from('form_fields')
+    .insert(input)
+    .select('id')
+    .single()
+
+    if(error) throw error;
+    return data.id
+
+}
