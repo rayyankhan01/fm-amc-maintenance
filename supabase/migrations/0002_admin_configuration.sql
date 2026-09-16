@@ -65,6 +65,12 @@ create table if not exists status_values (
   created_at timestamptz not null default now()
 );
 
+alter table status_values
+  add column if not exists is_active boolean not null default true;
+
+alter table status_values
+  add column if not exists sort_order integer not null default 0;
+
 create table if not exists maintenance_frequencies (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,
@@ -75,6 +81,12 @@ create table if not exists maintenance_frequencies (
   constraint maintenance_frequencies_interval_check
     check (interval_days is null or interval_days > 0)
 );
+
+alter table maintenance_frequencies
+  add column if not exists interval_days integer;
+
+alter table maintenance_frequencies
+  add column if not exists is_active boolean not null default true;
 
 create table if not exists permissions (
   code text primary key,

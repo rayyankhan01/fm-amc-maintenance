@@ -30,11 +30,11 @@ export default async function ConfigurationPage() {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Stack spacing={3}>
         <Typography variant="h4">System configuration</Typography>
-        <ConfigurationTable title="Status values" columns={['Code', 'Label', 'Active']} rows={configuration.statuses} renderRow={(row) => (
-          <TableRow key={row.code}><TableCell>{row.code}</TableCell><TableCell>{row.label}</TableCell><TableCell>{row.is_active ? 'Yes' : 'No'}</TableCell></TableRow>
+        <ConfigurationTable title="Status values" columns={['Code', 'Label', 'Active', 'Actions']} rows={configuration.statuses} renderRow={(row) => (
+          <TableRow key={row.code}><TableCell>{row.code}</TableCell><TableCell>{row.label}</TableCell><TableCell>{row.is_active ? 'Yes' : 'No'}</TableCell><TableCell><a href="/statuses">Manage statuses</a></TableCell></TableRow>
         )} />
-        <ConfigurationTable title="Maintenance frequencies" columns={['Code', 'Label', 'Interval (days)', 'Active']} rows={configuration.frequencies} renderRow={(row) => (
-          <TableRow key={row.code}><TableCell>{row.code}</TableCell><TableCell>{row.label}</TableCell><TableCell>{row.interval_days ?? 'Custom'}</TableCell><TableCell>{row.is_active ? 'Yes' : 'No'}</TableCell></TableRow>
+        <ConfigurationTable title="Maintenance frequencies" columns={['Code', 'Label', 'Interval (days)', 'Active', 'Actions']} rows={configuration.frequencies} renderRow={(row) => (
+          <TableRow key={row.code}><TableCell>{row.code}</TableCell><TableCell>{row.label}</TableCell><TableCell>{row.interval_days ?? 'Custom'}</TableCell><TableCell>{row.is_active ? 'Yes' : 'No'}</TableCell><TableCell><a href="/frequencies">Manage frequencies</a></TableCell></TableRow>
         )} />
         <ConfigurationTable title="System settings" columns={['Key', 'Value', 'Description']} rows={configuration.settings} renderRow={(row) => (
           <TableRow key={row.key}><TableCell>{row.key}</TableCell><TableCell>{JSON.stringify(row.value)}</TableCell><TableCell>{row.description ?? '-'}</TableCell></TableRow>

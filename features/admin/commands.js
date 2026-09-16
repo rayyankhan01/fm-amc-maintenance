@@ -23,6 +23,14 @@ function requiredUserRole(value) {
   return role;
 }
 
+function positiveInterval(value) {
+  const interval = Number(value);
+  if (!Number.isInteger(interval) || interval <= 0) {
+    throw new Error('Interval must be a positive whole number of days.');
+  }
+  return interval;
+}
+
 export async function createLocation(input) {
   const supabase = await requireAdmin();
   const { error } = await supabase.from('locations').insert({
@@ -78,6 +86,72 @@ export async function deleteEquipmentType(id) {
   const { error } = await supabase.from('equipment_types').update({ is_active: false }).eq('id', id);
   if (error) throw error;
   revalidatePath('/equipment-types');
+}
+
+export async function createStatusValue(input) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('status_values').insert({
+    code: required(input.code, 'Code').toUpperCase(),
+    label: required(input.label, 'Label'),
+    sort_order: Number(input.sort_order) || 0,
+  });
+  if (error) throw error;
+  revalidatePath('/configuration');
+  revalidatePath('/statuses');
+}
+
+export async function updateStatusValue(input) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('status_values').update({
+    code: required(input.code, 'Code').toUpperCase(),
+    label: required(input.label, 'Label'),
+    sort_order: Number(input.sort_order) || 0,
+    is_active: input.is_active !== false,
+  }).eq('id', input.id);
+  if (error) throw error;
+  revalidatePath('/configuration');
+  revalidatePath('/statuses');
+}
+
+export async function deactivateStatusValue(id) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('status_values').update({ is_active: false }).eq('id', id);
+  if (error) throw error;
+  revalidatePath('/configuration');
+  revalidatePath('/statuses');
+}
+
+export async function createMaintenanceFrequency(input) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('maintenance_frequencies').insert({
+    code: required(input.code, 'Code').toUpperCase(),
+    label: required(input.label, 'Label'),
+    interval_days: positiveInterval(input.interval_days),
+  });
+  if (error) throw error;
+  revalidatePath('/configuration');
+  revalidatePath('/frequencies');
+}
+
+export async function updateMaintenanceFrequency(input) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('maintenance_frequencies').update({
+    code: required(input.code, 'Code').toUpperCase(),
+    label: required(input.label, 'Label'),
+    interval_days: positiveInterval(input.interval_days),
+    is_active: input.is_active !== false,
+  }).eq('id', input.id);
+  if (error) throw error;
+  revalidatePath('/configuration');
+  revalidatePath('/frequencies');
+}
+
+export async function deactivateMaintenanceFrequency(id) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('maintenance_frequencies').update({ is_active: false }).eq('id', id);
+  if (error) throw error;
+  revalidatePath('/configuration');
+  revalidatePath('/frequencies');
 }
 
 export async function createSystemUser(input) {
