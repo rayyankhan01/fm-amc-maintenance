@@ -39,7 +39,7 @@ export default function LoginPage() {
     <Box
       component="form"
       onSubmit={handleLogin}
-      sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}
+      sx={{ display: 'flex', justifycontent: 'center', alignItems: 'center', minHeight: '100vh' }}
     >
       <Card sx={{ width: 400 }}>
         <CardContent>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Button, Stack, TextField } from '@mui/material';
+import { Alert, Button, MenuItem, Stack, TextField } from '@mui/material';
 
 export default function AdminCrudForm({ action, initialValues, fields, redirectTo, submitLabel = 'Save' }) {
   const router = useRouter();
@@ -27,7 +27,19 @@ export default function AdminCrudForm({ action, initialValues, fields, redirectT
   return (
     <Stack component="form" onSubmit={handleSubmit} spacing={2}>
       {fields.map((field) => (
-        <TextField key={field.name} label={field.label} required={field.required !== false} type={field.type ?? 'text'} value={values[field.name] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))} />
+        <TextField
+          key={field.name}
+          label={field.label}
+          required={field.required !== false}
+          type={field.type ?? 'text'}
+          select={field.type === 'select'}
+          value={values[field.name] ?? ''}
+          onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
+        >
+          {field.type === 'select' && field.options.map((option) => (
+            <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+          ))}
+        </TextField>
       ))}
       {error && <Alert severity="error">{error}</Alert>}
       <Button type="submit" variant="contained" disabled={saving}>{saving ? 'Saving...' : submitLabel}</Button>

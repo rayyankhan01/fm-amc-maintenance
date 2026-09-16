@@ -9,6 +9,9 @@ create table if not exists equipment_types (
   created_at timestamptz not null default now()
 );
 
+alter table equipment_types
+  add column if not exists is_active boolean not null default true;
+
 alter table equipment add column if not exists equipment_type_id uuid;
 
 insert into equipment_types (code, name)

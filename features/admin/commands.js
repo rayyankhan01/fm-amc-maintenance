@@ -15,6 +15,14 @@ function required(value, label) {
   return normalized;
 }
 
+const USER_ROLES = ['admin', 'engineer', 'technician'];
+
+function requiredUserRole(value) {
+  const role = required(value, 'Role');
+  if (!USER_ROLES.includes(role)) throw new Error('Invalid role.');
+  return role;
+}
+
 export async function createLocation(input) {
   const supabase = await requireAdmin();
   const { error } = await supabase.from('locations').insert({
@@ -77,7 +85,7 @@ export async function createSystemUser(input) {
   const empId = required(input.emp_id, 'Employee ID').toLowerCase();
   const email = `${empId}@sevenspikes.internal`;
   const password = required(input.password, 'Password');
-  const role = required(input.emp_role, 'Role');
+  const role = requiredUserRole(input.emp_role);
 
   const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
     email,
@@ -105,7 +113,7 @@ export async function updateSystemUser(input) {
   const supabase = await requireAdmin();
   const { error } = await supabase.from('profiles').update({
     name: required(input.name, 'Name'),
-    emp_role: required(input.emp_role, 'Role'),
+    emp_role: requiredUserRole(input.emp_role),
   }).eq('id', input.id);
   if (error) throw error;
   revalidatePath('/users');
