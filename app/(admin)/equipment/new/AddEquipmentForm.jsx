@@ -118,7 +118,7 @@ export default function AddEquipmentForm({equipmentTypes, statuses}){
                 >
                     {equipmentTypes.map((t)=> 
                     <MenuItem key = {t.id} value = {t.id}>
-                        {t.name}
+                        {t.code}
                     </MenuItem>)}
                 </TextField>
 
