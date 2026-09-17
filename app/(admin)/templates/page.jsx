@@ -30,7 +30,7 @@ export default async function AdminTemplatesPage(){
                         {templates.map((template)=>(
                             <TableRow key ={template.id}>
                                 <TableCell>{template.name}</TableCell>
-                                <TableCell>{template.equipment_types?.name ?? '-'}</TableCell>
+                                <TableCell>{template.equipment_types?.code ?? '-'}</TableCell>
                                 <TableCell>{template.form_fields.length}</TableCell>
                             </TableRow>
                         ))}
