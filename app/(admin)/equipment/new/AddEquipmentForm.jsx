@@ -8,16 +8,15 @@ import { MenuItem, TextField, Box, Stack, Button , Alert } from '@mui/material';
 
 
 
-const STATUS_OPTIONS = ['Operational', 'Not Operational'];
-
 /**
  * @param {{
  *   locations: Array<{ id: string, site_code: string, room_area: string }>,
  *   equipmentTypes: Array<{ id: string, code: string, name: string }>,
+ *   statuses: Array<{ code: string, label: string }>,
  * }} props
  */
 
-export default function AddEquipmentForm({equipmentTypes}){
+export default function AddEquipmentForm({equipmentTypes, statuses}){
 
     const router = useRouter();
     const [form,setForm] = useState({
@@ -27,7 +26,7 @@ export default function AddEquipmentForm({equipmentTypes}){
         name:'',
         site_code:'',
         room_area:'',
-        status:'Operational',    
+        status: statuses[0]?.code ?? '',
     })
     const [error,setError] = useState(null);
     const [submitting,setSubmitting] = useState(null);
@@ -167,9 +166,9 @@ export default function AddEquipmentForm({equipmentTypes}){
                 value={form.status}
                 onChange={(e)=> update('status',e.target.value)}
                 >
-                    {STATUS_OPTIONS.map((s)=>(
-                        <MenuItem key={s} value={s}>
-                        {s}
+                    {statuses.map((status)=>(
+                        <MenuItem key={status.code} value={status.code}>
+                        {status.label}
                         </MenuItem>
                     ))}
                 </TextField>
