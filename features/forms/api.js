@@ -93,6 +93,38 @@ export async function submitInspection(supabase, input) {
 
   return submission.id;
 }
+
+/**
+ * Fetches one submitted inspection with all data needed by the read-only report.
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} submissionId
+ */
+export async function getSubmissionWithResponses(supabase, submissionId) {
+  const { data, error } = await supabase
+    .from('form_submissions')
+    .select(`
+      id, template_id, equipment_id, technician_id, inspection_date,
+      technician_signature, supervisor_signature, submitted_at,
+      equipment (
+        id, equipment_type_code, equipment_type, unit_number, name,
+        locations ( site_code, site_name, room_area )
+      ),
+      profiles ( name, emp_id ),
+      form_templates (
+        id, name, equipment_type,
+        form_fields ( id, field_type, section, label, sort_order, is_mandatory )
+      ),
+      form_responses ( id, field_id, result, value, remarks )
+    `)
+    .eq('id', submissionId)
+    .single();
+
+  if (error) throw error;
+
+  data.form_templates.form_fields.sort((left, right) => left.sort_order - right.sort_order);
+  return data;
+}
+
 export async function createTemplate(supabase, input) {
   const { data, error } = await supabase
     .from('form_templates')
