@@ -15,6 +15,13 @@ function required(value, label) {
   return normalized;
 }
 
+function toPascalDisplay(value, label) {
+  return required(value, label)
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 const USER_ROLES = ['admin', 'engineer', 'technician'];
 
 function requiredUserRole(value) {
@@ -62,8 +69,8 @@ function equipmentInput(input) {
     equipment_type_code: required(input.equipment_type_code, 'Equipment type code').toUpperCase(),
     unit_number: Number(input.unit_number),
     name: required(input.name, 'Equipment name'),
-    status: required(input.status, 'Equipment status'),
-    amc_frequency: required(input.amc_frequency, 'AMC frequency'),
+    status: toPascalDisplay(input.status, 'Equipment status'),
+    amc_frequency: toPascalDisplay(input.amc_frequency, 'AMC frequency'),
   };
 }
 

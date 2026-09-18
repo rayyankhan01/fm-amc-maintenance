@@ -24,5 +24,7 @@ export default async function EditEquipmentPage({ params }) {
   ]);
   if (error || !equipment) notFound();
   const location = equipment.locations ?? {};
-  return <Container maxWidth="sm" sx={{ py: 4 }}><Typography variant="h5" sx={{ mb: 3 }}>Edit Equipment</Typography><EquipmentForm action={updateAdminEquipment} initialValues={{ id: equipment.id, equipment_type_id: equipment.equipment_type_id ?? '', equipment_type: equipment.equipment_type ?? '', equipment_type_code: equipment.equipment_type_code, unit_number: equipment.unit_number, name: equipment.name ?? '', site_name: location.site_name ?? '', site_code: location.site_code ?? '', room_area: location.room_area ?? '', status: equipment.status ?? '', amc_frequency: equipment.amc_frequency ?? '' }} {...lookups} submitLabel="Save equipment" /></Container>;
+  const status = lookups.statuses.find((item) => item.label.toLowerCase() === equipment.status?.toLowerCase())?.code ?? equipment.status ?? '';
+  const amcFrequency = lookups.frequencies.find((item) => item.label.toLowerCase() === equipment.amc_frequency?.toLowerCase())?.code ?? equipment.amc_frequency ?? '';
+  return <Container maxWidth="sm" sx={{ py: 4 }}><Typography variant="h5" sx={{ mb: 3 }}>Edit Equipment</Typography><EquipmentForm action={updateAdminEquipment} initialValues={{ id: equipment.id, equipment_type_id: equipment.equipment_type_id ?? '', equipment_type: equipment.equipment_type ?? '', equipment_type_code: equipment.equipment_type_code, unit_number: equipment.unit_number, name: equipment.name ?? '', site_name: location.site_name ?? '', site_code: location.site_code ?? '', room_area: location.room_area ?? '', status, amc_frequency: amcFrequency }} {...lookups} submitLabel="Save equipment" /></Container>;
 }
