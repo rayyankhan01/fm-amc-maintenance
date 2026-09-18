@@ -74,7 +74,7 @@ export default function AddTemplateForm({equipmentTypes}){
                     equipmentTypes.map((t)=>
                     (
                         <MenuItem key ={t.id} value={t.id}>
-                            {t.name}
+                            {t.code}
                         </MenuItem>
                     ))
                 }

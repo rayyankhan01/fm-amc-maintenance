@@ -154,3 +154,49 @@ export async function addFormField(supabase,input){
     return data.id
 
 }
+
+/**
+ * Updates an existing form field's definition.
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} fieldId
+ * @param {{ label: string, section: string | null, field_type: string, is_mandatory: boolean }} input
+ * @returns {Promise<void>}
+ */
+
+export async function updateFormField(supabase,fieldId, input){
+    const {error} = await supabase
+    .from('form_fields')
+    .update(input)
+    .eq('id', fieldId)
+
+    if (error) throw error;
+}
+
+/**
+ * Deletes a form field from a template.
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} fieldId
+ * @returns {Promise<void>}
+ */
+export async function deleteFormField(supabase,fieldId){
+    const {error} = await supabase
+    .from('form_fields')
+    .delete()
+    .eq('id',fieldId)
+
+    if(error) throw error;
+}
+/**
+ * Deletes a form template.
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} templateId
+ * @returns {Promise<void>}
+ */
+export async function deleteTemplate(supabase, templateId){
+    const {error} = await supabase
+    .from('form_templates')
+    .delete()
+    .eq('id',templateId)
+
+    if(error) throw error;
+}
