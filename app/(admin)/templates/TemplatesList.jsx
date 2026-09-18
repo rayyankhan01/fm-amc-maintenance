@@ -60,7 +60,7 @@ export default function TemplatesList({templates}){
                             hover
                             >
                                 <TableCell>{template.name}</TableCell>
-                                <TableCell>{template.equipment_types?.name ?? '-'}</TableCell>
+                                <TableCell>{template.equipment_types?.code ?? '-'}</TableCell>
                                 <TableCell>{template.form_fields.length}</TableCell>
                                 <TableCell>
                                     <IconButton size = 'small' color='error' onClick={(e)=> handleDelete(e,template.id)}>

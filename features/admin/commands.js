@@ -15,6 +15,13 @@ function required(value, label) {
   return normalized;
 }
 
+function toPascalDisplay(value, label) {
+  return required(value, label)
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 const USER_ROLES = ['admin', 'engineer', 'technician'];
 
 function requiredUserRole(value) {
@@ -29,6 +36,70 @@ function positiveInterval(value) {
     throw new Error('Interval must be a positive whole number of days.');
   }
   return interval;
+}
+
+async function findOrCreateAdminLocation(supabase, input) {
+  const siteCode = required(input.site_code, 'Site code');
+  const roomArea = required(input.room_area, 'Room/area');
+  const siteName = String(input.site_name ?? '').trim() || null;
+  const { data: existing, error: findError } = await supabase
+    .from('locations')
+    .select('id')
+    .eq('site_code', siteCode)
+    .eq('room_area', roomArea)
+    .maybeSingle();
+  if (findError) throw findError;
+  if (existing) {
+    if (siteName) await supabase.from('locations').update({ site_name: siteName }).eq('id', existing.id);
+    return existing.id;
+  }
+  const { data, error } = await supabase.from('locations').insert({
+    site_code: siteCode,
+    site_name: siteName,
+    room_area: roomArea,
+  }).select('id').single();
+  if (error) throw error;
+  return data.id;
+}
+
+function equipmentInput(input) {
+  return {
+    equipment_type_id: required(input.equipment_type_id, 'Equipment category'),
+    equipment_type: required(input.equipment_type, 'Equipment type'),
+    equipment_type_code: required(input.equipment_type_code, 'Equipment type code').toUpperCase(),
+    unit_number: Number(input.unit_number),
+    name: required(input.name, 'Equipment name'),
+    status: toPascalDisplay(input.status, 'Equipment status'),
+    amc_frequency: toPascalDisplay(input.amc_frequency, 'AMC frequency'),
+  };
+}
+
+export async function createAdminEquipment(input) {
+  const supabase = await requireAdmin();
+  const locationId = await findOrCreateAdminLocation(supabase, input);
+  const values = equipmentInput(input);
+  if (!Number.isInteger(values.unit_number) || values.unit_number < 1) throw new Error('Unit number must be a positive whole number.');
+  const { error } = await supabase.from('equipment').insert({ ...values, location_id: locationId });
+  if (error) throw error;
+  revalidatePath('/equipment');
+}
+
+export async function updateAdminEquipment(input) {
+  const supabase = await requireAdmin();
+  const locationId = await findOrCreateAdminLocation(supabase, input);
+  const values = equipmentInput(input);
+  if (!Number.isInteger(values.unit_number) || values.unit_number < 1) throw new Error('Unit number must be a positive whole number.');
+  const { error } = await supabase.from('equipment').update({ ...values, location_id: locationId }).eq('id', input.id);
+  if (error) throw error;
+  revalidatePath('/equipment');
+  revalidatePath(`/equipment/${input.id}`);
+}
+
+export async function deleteAdminEquipment(id) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('equipment').delete().eq('id', id);
+  if (error) throw error;
+  revalidatePath('/equipment');
 }
 
 export async function createLocation(input) {
