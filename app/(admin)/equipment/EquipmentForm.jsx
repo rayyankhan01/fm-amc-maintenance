@@ -13,6 +13,7 @@ export default function EquipmentForm({
   statuses,
   frequencies,
   submitLabel,
+  locations,
 }) {
   const router = useRouter();
   const [values, setValues] = useState(initialValues);
@@ -107,10 +108,23 @@ export default function EquipmentForm({
       />
       <TextField
         required
+        select
         label="Site name"
         value={values.site_name}
-        onChange={(event) => update("site_name", event.target.value)}
-      />
+        onChange={(event) => {
+          const site = locations.find(
+            (item) => item.site_name === event.target.value,
+          );
+          update("site_name", event.target.value);
+          update("site_code", site?.site_code ?? "");
+        }}
+      >
+        {locations.map((site) => (
+          <MenuItem key={site.site_name} value={site.site_name}>
+            {site.site_name}
+          </MenuItem>
+        ))}
+      </TextField>
       <TextField
         required
         label="Location / site code"

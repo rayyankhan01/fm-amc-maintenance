@@ -5,7 +5,7 @@ import EquipmentForm from "../EquipmentForm";
 import AddEquipmentForm from "./AddEquipmentForm";
 
 async function getLookups(supabase) {
-  const [types, statuses, frequencies] = await Promise.all([
+  const [types, statuses, frequencies, locations] = await Promise.all([
     supabase
       .from("equipment_types")
       .select("id, code, name")
@@ -21,13 +21,23 @@ async function getLookups(supabase) {
       .select("code, label")
       .eq("is_active", true)
       .order("label"),
+    supabase.from("locations").select("site_code,site_name").order("site_code"),
   ]);
-  const failure = [types, statuses, frequencies].find((result) => result.error);
+  const failure = [types, statuses, frequencies, locations].find(
+    (result) => result.error,
+  );
   if (failure?.error) throw failure.error;
+  const uniqueSite = new Map();
+  for (const row of locations.data ?? []) {
+    if (!uniqueSite.has(row.site_code)) {
+      uniqueSite.set(row.site_code, row);
+    }
+  }
   return {
     equipmentTypes: types.data ?? [],
     statuses: statuses.data ?? [],
     frequencies: frequencies.data ?? [],
+    locations: Array.from(uniqueSite.values()),
   };
 }
 
