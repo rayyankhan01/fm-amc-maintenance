@@ -1,20 +1,27 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { Button, TextField, Card, CardContent, Typography, Box } from '@mui/material';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import {
+  Button,
+  TextField,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+} from "@mui/material";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [empId, setEmpId] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [empId, setEmpId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e) {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     // Technicians log in with their employee ID, not an email. Supabase
@@ -23,7 +30,10 @@ export default function LoginPage() {
     const email = `${empId.trim().toLowerCase()}@sevenspikes.internal`;
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (authError) {
       setError(authError.message);
@@ -31,7 +41,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/inspections');
+    router.push("/inspections");
     router.refresh();
   }
 
@@ -39,7 +49,12 @@ export default function LoginPage() {
     <Box
       component="form"
       onSubmit={handleLogin}
-      sx={{ display: 'flex', justifycontent: 'center', alignItems: 'center', minHeight: '100vh' }}
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+      }}
     >
       <Card sx={{ width: 400 }}>
         <CardContent>
@@ -75,7 +90,7 @@ export default function LoginPage() {
             disabled={loading}
             sx={{ mt: 1 }}
           >
-            {loading ? 'Signing in...' : 'Login'}
+            {loading ? "Signing in..." : "Login"}
           </Button>
         </CardContent>
       </Card>
