@@ -11,6 +11,7 @@ import {
   Typography,
   Box,
 } from "@mui/material";
+import { idID } from "@mui/material/locale";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function LoginPage() {
     const email = `${empId.trim().toLowerCase()}@sevenspikes.internal`;
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -41,7 +42,16 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/inspections");
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("emp_role")
+      .eq("id", data.user.id)
+      .single();
+
+    const isAdminSide =
+      profile?.emp_role === "admin" || profile?.emp_role === "manager";
+
+    router.push(isAdminSide ? "/dashboard" : "/inspections");
     router.refresh();
   }
 
