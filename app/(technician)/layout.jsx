@@ -1,7 +1,13 @@
-import { requireRole } from '@/lib/auth';
+import LogoutButton from "@/features/auth/components/LogoutButton";
+import { requireRole } from "@/lib/auth";
 
 export default async function TechnicianLayout({ children }) {
-  await requireRole(['technician']);
+  await requireRole(["technician"]);
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <LogoutButton />
+    </>
+  );
 }
