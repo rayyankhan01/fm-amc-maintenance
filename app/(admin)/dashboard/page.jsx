@@ -1,5 +1,5 @@
 import { Container, Grid, Paper, Stack, Typography } from "@mui/material";
-
+import LogoutButton from "@/features/auth/components/LogoutButton";
 const sections = [
   {
     href: "/users",
@@ -41,11 +41,21 @@ const sections = [
 export default function AdminDashboardPage() {
   return (
     <Container maxWidth="lg" sx={{ py: 5 }}>
-      <Stack spacing={1} sx={{ mb: 4 }}>
-        <Typography variant="h4">Administrator</Typography>
-        <Typography color="text.secondary">
-          Configure the maintenance system and manage access.
-        </Typography>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 4,
+        }}
+      >
+        <Stack spacing={1}>
+          <Typography variant="h4">Administrator</Typography>
+          <Typography color="text.secondary">
+            Configure the maintenance system and manage access.
+          </Typography>
+        </Stack>
+        <LogoutButton />
       </Stack>
       <Grid container spacing={2}>
         {sections.map((section) => (

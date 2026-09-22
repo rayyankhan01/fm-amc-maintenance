@@ -1,6 +1,7 @@
-import { Container, Typography } from "@mui/material";
+import { Container, Typography, Stack } from "@mui/material";
 import { createClient } from "@/lib/supabase/server";
 import EquipmentList from "./EquipmentList";
+import LogoutButton from "@/features/auth/components/LogoutButton";
 
 export default async function InspectionsPage() {
   const supabase = await createClient();
@@ -23,9 +24,20 @@ export default async function InspectionsPage() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>
-        Select Equipment
-      </Typography>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 4,
+        }}
+      >
+        <Typography variant="h5" sx={{ mb: 3 }}>
+          Select Equipment
+        </Typography>
+        <LogoutButton />
+      </Stack>
+
       <EquipmentList equipment={equipment} equipmentTypes={equipmentTypes} />
     </Container>
   );
