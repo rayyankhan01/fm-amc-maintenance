@@ -1,3 +1,22 @@
 body {
   min-height: 100vh;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .report-print-control {
+    display: none !important;
+  }
+
+  .manager-signature-slot {
+    break-inside: avoid;
+  }
+}

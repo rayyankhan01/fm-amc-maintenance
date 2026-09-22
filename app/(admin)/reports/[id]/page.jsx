@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
-import { Button, Container } from '@mui/material';
+import { Button, Container, Stack } from '@mui/material';
 import { createClient } from '@/lib/supabase/server';
 import { getSubmissionWithResponses } from '@/features/forms/api';
 import SubmissionViewer from '@/features/forms/components/SubmissionViewer';
+import PrintReportButton from '../PrintReportButton';
 
 export default async function InspectionReportPage({ params }) {
   const { id } = await params;
@@ -12,7 +13,10 @@ export default async function InspectionReportPage({ params }) {
     const submission = await getSubmissionWithResponses(supabase, id);
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Button href="/reports" sx={{ mb: 3 }}>Back to reports</Button>
+        <Stack className="report-print-control" direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
+          <Button href="/reports">Back to reports</Button>
+          <PrintReportButton />
+        </Stack>
         <SubmissionViewer submission={submission} />
       </Container>
     );

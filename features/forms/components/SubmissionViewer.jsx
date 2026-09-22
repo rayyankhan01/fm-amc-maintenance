@@ -120,18 +120,25 @@ export default function SubmissionViewer({ submission }) {
 
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>Signatures</Typography>
-        {submission.technician_signature ? (
-          <Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={4}>
+          {submission.technician_signature ? (
+            <Box sx={{ flex: 1 }}>
             <Typography variant="body2" color="text.secondary">Technician</Typography>
             <Box component="img" src={submission.technician_signature} alt="Technician signature" sx={{ display: 'block', maxWidth: '100%', height: 100, objectFit: 'contain', objectPosition: 'left' }} />
+            </Box>
+          ) : <Alert severity="info" sx={{ flex: 1 }}>No technician signature recorded.</Alert>}
+          {submission.supervisor_signature && (
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" color="text.secondary">Supervisor</Typography>
+              <Box component="img" src={submission.supervisor_signature} alt="Supervisor signature" sx={{ display: 'block', maxWidth: '100%', height: 100, objectFit: 'contain', objectPosition: 'left' }} />
+            </Box>
+          )}
+          <Box className="manager-signature-slot" sx={{ flex: 1, minWidth: 220, minHeight: 130, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center' }}>
+            <Box sx={{ borderBottom: '1px solid', borderColor: 'text.primary', height: 80, width: '100%' }} />
+            <Typography variant="body2" sx={{ mt: 1 }}>Manager&apos;s wet signature</Typography>
+            <Typography variant="caption" color="text.secondary">Signature / date</Typography>
           </Box>
-        ) : <Alert severity="info">No technician signature recorded.</Alert>}
-        {submission.supervisor_signature && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="text.secondary">Supervisor</Typography>
-            <Box component="img" src={submission.supervisor_signature} alt="Supervisor signature" sx={{ display: 'block', maxWidth: '100%', height: 100, objectFit: 'contain', objectPosition: 'left' }} />
-          </Box>
-        )}
+        </Stack>
       </Paper>
     </Stack>
   );

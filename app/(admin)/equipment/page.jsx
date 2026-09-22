@@ -26,7 +26,7 @@ export default async function AdminEquipmentPage() {
   if (error) throw error;
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Stack direction="row" justifycontent="space-between" sx={{ mb: 3 }}>
+      <Stack direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
         <Typography variant="h4">Equipment</Typography>
         <Button href="/equipment/new" variant="contained">
           Add equipment
