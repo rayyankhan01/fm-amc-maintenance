@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import { deleteAdminEquipment } from "@/features/admin/commands";
+import DeleteConfirmationButton from "../DeleteConfirmationButton";
 
 export default async function AdminEquipmentPage() {
   const supabase = await createClient();
@@ -71,9 +72,10 @@ export default async function AdminEquipmentPage() {
                       action={deleteAdminEquipment.bind(null, item.id)}
                       style={{ display: "inline" }}
                     >
-                      <Button type="submit" color="error">
-                        Delete
-                      </Button>
+                      <DeleteConfirmationButton
+                        title="Delete equipment?"
+                        message="This will permanently delete the equipment record. Existing inspection history may prevent deletion."
+                      />
                     </form>
                   </TableCell>
                 </TableRow>

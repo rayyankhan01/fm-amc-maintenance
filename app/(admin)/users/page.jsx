@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Container, Button, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { deleteSystemUser } from '@/features/admin/commands';
+import DeleteConfirmationButton from '../DeleteConfirmationButton';
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
@@ -19,7 +20,7 @@ export default async function AdminUsersPage() {
           <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Employee ID</TableCell><TableCell>Role</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
           <TableBody>
             {users.map((user) => (
-              <TableRow key={user.id}><TableCell>{user.name}</TableCell><TableCell>{user.emp_id}</TableCell><TableCell>{user.emp_role}</TableCell><TableCell><Button href={`/users/${user.id}`}>Edit</Button><form action={deleteSystemUser.bind(null, user.id)} style={{ display: 'inline' }}><Button type="submit" color="error">Delete</Button></form></TableCell></TableRow>
+              <TableRow key={user.id}><TableCell>{user.name}</TableCell><TableCell>{user.emp_id}</TableCell><TableCell>{user.emp_role}</TableCell><TableCell><Button href={`/users/${user.id}`}>Edit</Button><form action={deleteSystemUser.bind(null, user.id)} style={{ display: 'inline' }}><DeleteConfirmationButton title="Delete user?" message="This will permanently delete the user account and profile. The user will no longer be able to sign in." /></form></TableCell></TableRow>
             ))}
           </TableBody>
         </Table>
