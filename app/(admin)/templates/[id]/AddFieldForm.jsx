@@ -36,6 +36,16 @@ export default function AddFieldForm({templateId, fields}){
             return;
         }
 
+        const duplicate = fields.some((field) =>
+            field.field_type === fieldType &&
+            (field.section ?? '').trim().toLowerCase() === section.trim().toLowerCase() &&
+            field.label.trim().toLowerCase() === label.trim().toLowerCase()
+        );
+        if (duplicate) {
+            setError('A field with the same section, type, and label already exists.')
+            return;
+        }
+
         const nextSortOrder=
             fields.length > 0 ? Math.max(...fields.map((f) => f.sort_order)) + 1 : 1;
 

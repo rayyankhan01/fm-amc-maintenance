@@ -32,11 +32,12 @@ export default function ChecklistForm({ template, equipment, assetId, technician
 
     const grouped = [];
     for (const field of checklistFields) {
+      const section = field.section?.trim() || 'Inspection checklist';
       const last = grouped[grouped.length - 1];
-      if (last && last.section === field.section) {
+      if (last && last.section === section) {
         last.fields.push(field);
       } else {
-        grouped.push({ section: field.section, fields: [field] });
+        grouped.push({ section, fields: [field] });
       }
     }
 
@@ -133,8 +134,8 @@ export default function ChecklistForm({ template, equipment, assetId, technician
         </Paper>
       )}
 
-      {sections.checklistSections.map((group) => (
-        <Paper key={group.section} variant="outlined" sx={{ p: 2, mb: 3 }}>
+      {sections.checklistSections.map((group, index) => (
+        <Paper key={`${group.section ?? 'inspection'}-${index}`} variant="outlined" sx={{ p: 2, mb: 3 }}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
             {group.section}
           </Typography>

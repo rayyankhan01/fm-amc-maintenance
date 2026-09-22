@@ -52,6 +52,16 @@ export default function FieldsTable({fields}){
             setError('Label is required')
             return;
         }
+        const duplicate = fields.some((field) =>
+            field.id !== fieldId &&
+            field.field_type === editForm.field_type &&
+            (field.section ?? '').trim().toLowerCase() === editForm.section.trim().toLowerCase() &&
+            field.label.trim().toLowerCase() === editForm.label.trim().toLowerCase()
+        );
+        if (duplicate) {
+            setError('A field with the same section, type, and label already exists.')
+            return;
+        }
         try{
             const supabase =createClient()
             await updateFormField(supabase, fieldId,{

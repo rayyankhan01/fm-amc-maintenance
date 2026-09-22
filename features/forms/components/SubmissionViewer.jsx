@@ -43,9 +43,10 @@ export default function SubmissionViewer({ submission }) {
   const sections = [];
 
   for (const field of checklistFields) {
+    const section = field.section?.trim() || 'Inspection checklist';
     const previous = sections[sections.length - 1];
-    if (previous?.name === field.section) previous.fields.push(field);
-    else sections.push({ name: field.section || 'Inspection checklist', fields: [field] });
+    if (previous?.name === section) previous.fields.push(field);
+    else sections.push({ name: section, fields: [field] });
   }
 
   const equipment = submission.equipment ?? {};
@@ -88,8 +89,8 @@ export default function SubmissionViewer({ submission }) {
         </Paper>
       )}
 
-      {sections.map((section) => (
-        <Paper variant="outlined" sx={{ overflow: 'hidden' }} key={section.name}>
+      {sections.map((section, index) => (
+        <Paper variant="outlined" sx={{ overflow: 'hidden' }} key={`${section.name}-${index}`}>
           <Typography variant="h6" sx={{ p: 2 }}>{section.name}</Typography>
           <Divider />
           <Table size="small">
