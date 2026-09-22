@@ -23,7 +23,8 @@ export default function ChecklistItemField({ field, value, onChange }) {
 
   return (
     <Box sx={{ py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-      <Typography variant="body2" sx={{ mb: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) auto' }, alignItems: 'center', columnGap: 2, rowGap: 1 }}>
+      <Typography variant="body2" sx={{ minWidth: 0 }}>
         {field.label}
         {field.is_mandatory && (
           <Typography component="span" color="error">
@@ -44,6 +45,7 @@ export default function ChecklistItemField({ field, value, onChange }) {
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
+      </Box>
 
       {result === 'N_OK' && (
         <TextField
