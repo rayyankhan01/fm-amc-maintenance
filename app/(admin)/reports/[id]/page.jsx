@@ -13,7 +13,7 @@ export default async function InspectionReportPage({ params }) {
     const submission = await getSubmissionWithResponses(supabase, id);
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Stack className="report-print-control" direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Stack className="report-print-control" direction="row" sx={{ mb: 3, justifyContent: 'space-between' }}>
           <Button href="/reports">Back to reports</Button>
           <PrintReportButton />
         </Stack>

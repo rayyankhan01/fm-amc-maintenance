@@ -14,7 +14,7 @@ export default async function AdminUsersPage() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Stack direction="row" justifyContent="space-between" sx={{ mb: 3 }}><Typography variant="h4">Users</Typography><Button href="/users/new" variant="contained">Create user</Button></Stack>
+      <Stack direction="row" sx={{ mb: 3, justifyContent: 'space-between' }}><Typography variant="h4">Users</Typography><Button href="/users/new" variant="contained">Create user</Button></Stack>
       <Paper variant="outlined">
         <Table>
           <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Employee ID</TableCell><TableCell>Role</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>

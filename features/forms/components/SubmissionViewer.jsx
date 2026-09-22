@@ -120,7 +120,7 @@ export default function SubmissionViewer({ submission }) {
 
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>Signatures</Typography>
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={4}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ justifyContent: 'space-between' }}>
           {submission.technician_signature ? (
             <Box sx={{ flex: 1 }}>
             <Typography variant="body2" color="text.secondary">Technician</Typography>
