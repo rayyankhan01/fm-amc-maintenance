@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { Button, Container, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Container, Typography } from '@mui/material';
+import ReportsTable from './ReportsTable';
 
 export default async function AdminReportsPage() {
   const supabase = await createClient();
@@ -14,22 +15,7 @@ export default async function AdminReportsPage() {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>Inspection report</Typography>
-      <Paper variant="outlined">
-        <Table>
-          <TableHead><TableRow><TableCell>Date</TableCell><TableCell>Template</TableCell><TableCell>Equipment</TableCell><TableCell>Technician</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
-          <TableBody>
-            {submissions.map((submission) => (
-              <TableRow key={submission.id}>
-                <TableCell>{submission.inspection_date}</TableCell>
-                <TableCell>{submission.form_templates?.name ?? '-'}</TableCell>
-                <TableCell>{submission.equipment ? `${submission.equipment.equipment_type_code}/${submission.equipment.unit_number}` : '-'}</TableCell>
-                <TableCell>{submission.profiles?.name ?? '-'}</TableCell>
-                <TableCell><Button href={`/reports/${submission.id}`}>View</Button></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
+      <ReportsTable submissions={submissions ?? []} />
     </Container>
   );
 }
