@@ -9,6 +9,7 @@ export default async function InspectionsPage() {
   const [
     { data: equipment, error },
     { data: equipmentTypes, error: typesError },
+    { data: submissions, error: submissionError },
   ] = await Promise.all([
     supabase
       .from("equipment")
@@ -17,10 +18,17 @@ export default async function InspectionsPage() {
       )
       .order("unit_number", { ascending: true }),
     supabase.from("equipment_types").select("id, code ,name").order("name"),
+    supabase
+      .from("form_submissions")
+      .select("equipment_id")
+      .order("submitted_at"),
   ]);
-
+  const submittedIds = new Set(
+    submissions?.map((row) => row.equipment_id) ?? [],
+  );
   if (error) throw error;
   if (typesError) throw typesError;
+  if (submissionError) throw submissionError;
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
@@ -35,10 +43,21 @@ export default async function InspectionsPage() {
         <Typography variant="h5" sx={{ mb: 3 }}>
           Select Equipment
         </Typography>
+
         <LogoutButton />
       </Stack>
+      <Stack>
+        <Typography variant="subtitle2" sx={{ mb: 2, color: "red" }}>
+          NOTE : The status is currently visual, so it does not update once the
+          deadline is due
+        </Typography>
+      </Stack>
 
-      <EquipmentList equipment={equipment} equipmentTypes={equipmentTypes} />
+      <EquipmentList
+        equipment={equipment}
+        equipmentTypes={equipmentTypes}
+        submissions={submittedIds}
+      />
     </Container>
   );
 }

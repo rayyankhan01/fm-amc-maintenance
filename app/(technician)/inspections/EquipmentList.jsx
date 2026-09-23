@@ -11,7 +11,11 @@ import {
   TextField,
   Box,
   MenuItem,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@mui/material";
+import { ExpandMore } from "@mui/icons-material";
 import { useMemo, useState } from "react";
 
 /**
@@ -25,16 +29,56 @@ import { useMemo, useState } from "react";
  *   locations: { site_code: string, room_area: string } | null,
  * }> }} props
  */
-export default function EquipmentList({ equipment, equipmentTypes }) {
-  const [selectedTypeId, setSelectedTypeId] = useState("");
 
+function renderEquipmentList(items) {
+  if (items.length === 0) {
+    return <Typography>No equipment found</Typography>;
+  }
+  return (
+    <Paper>
+      <List disablePadding>
+        {items.map((item) => {
+          const assetId = `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`;
+          return (
+            <ListItemButton
+              key={item.id}
+              component={Link}
+              href={`/inspections/${item.id}`}
+              divider
+            >
+              <ListItemText
+                primary={item.name ?? item.equipment_type}
+                secondary={`${assetId}· ${item.locations?.room_area ?? ""}`}
+              />
+              <Chip label={item.status} size="small" />
+            </ListItemButton>
+          );
+        })}
+      </List>
+    </Paper>
+  );
+}
+
+export default function EquipmentList({
+  equipment,
+  equipmentTypes,
+  submissions,
+}) {
+  const [selectedTypeId, setSelectedTypeId] = useState("");
   const filteredEquipment = useMemo(() => {
     if (!selectedTypeId) return equipment;
     return equipment.filter(
       (item) => item.equipment_type_id === selectedTypeId,
     );
   }, [equipment, selectedTypeId]);
-
+  //filtering though the equipments to see whether the
+  //submissions table has a entry with the matching equipment id
+  const pendingEquipment = filteredEquipment.filter(
+    (item) => !submissions.has(item.id),
+  );
+  const submittedEquipment = filteredEquipment.filter((item) =>
+    submissions.has(item.id),
+  );
   if (equipment.length === 0) {
     return (
       <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
@@ -62,7 +106,7 @@ export default function EquipmentList({ equipment, equipmentTypes }) {
         </TextField>
       </Box>
 
-      {filteredEquipment.length === 0 ? (
+      {/* {filteredEquipment.length === 0 ? (
         <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
           No equipment found.
         </Typography>
@@ -89,7 +133,24 @@ export default function EquipmentList({ equipment, equipmentTypes }) {
             })}
           </List>
         </Paper>
-      )}
+      )} */}
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMore />}>
+          <Typography>Pending ({pendingEquipment.length})</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          {renderEquipmentList(pendingEquipment)}
+        </AccordionDetails>
+      </Accordion>
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMore />}>
+          <Typography>Submitted ({submittedEquipment.length})</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          {renderEquipmentList(submittedEquipment)}
+        </AccordionDetails>
+      </Accordion>
     </>
   );
 }
