@@ -30,6 +30,10 @@ import { useMemo, useState } from "react";
  * }> }} props
  */
 
+//helper function to get asset id in renderEquipmentList and in the search Function
+function getAssetId(item) {
+  return `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`;
+}
 function renderEquipmentList(items) {
   if (items.length === 0) {
     return <Typography>No equipment found</Typography>;
@@ -38,7 +42,7 @@ function renderEquipmentList(items) {
     <Paper>
       <List disablePadding>
         {items.map((item) => {
-          const assetId = `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`;
+          const assetId = getAssetId(item);
           return (
             <ListItemButton
               key={item.id}
@@ -65,12 +69,24 @@ export default function EquipmentList({
   submissions,
 }) {
   const [selectedTypeId, setSelectedTypeId] = useState("");
+  const [searchText, setSearchText] = useState("");
   const filteredEquipment = useMemo(() => {
-    if (!selectedTypeId) return equipment;
-    return equipment.filter(
-      (item) => item.equipment_type_id === selectedTypeId,
-    );
-  }, [equipment, selectedTypeId]);
+    const byType = selectedTypeId
+      ? equipment.filter((item) => item.equipment_type_id === selectedTypeId)
+      : equipment;
+
+    if (!searchText.trim()) return byType;
+
+    const query = searchText.trim().toLowerCase();
+    return byType.filter((item) => {
+      const assetId = getAssetId(item);
+      return (
+        assetId.toLowerCase().includes(query) ||
+        (item.name ?? "").toLowerCase().includes(query)
+      );
+    });
+  }, [equipment, selectedTypeId, searchText]);
+
   //filtering though the equipments to see whether the
   //submissions table has a entry with the matching equipment id
   const pendingEquipment = filteredEquipment.filter(
@@ -91,6 +107,16 @@ export default function EquipmentList({
     <>
       <Box sx={{ mb: 3 }}>
         <TextField
+          label="Search Asset"
+          fullWidth
+          value={searchText}
+          onChange={(e) => {
+            setSearchText(e.target.value);
+            setSelectedTypeId("");
+          }}
+          sx={{ mb: 2 }}
+        />
+        <TextField
           select
           label="Equipment Type"
           fullWidth
@@ -105,35 +131,6 @@ export default function EquipmentList({
           ))}
         </TextField>
       </Box>
-
-      {/* {filteredEquipment.length === 0 ? (
-        <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
-          No equipment found.
-        </Typography>
-      ) : (
-        <Paper variant="outlined">
-          <List disablePadding>
-            {filteredEquipment.map((item) => {
-              const assetId = `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`;
-
-              return (
-                <ListItemButton
-                  key={item.id}
-                  component={Link}
-                  href={`/inspections/${item.id}`}
-                  divider
-                >
-                  <ListItemText
-                    primary={item.name ?? item.equipment_type}
-                    secondary={`${assetId} · ${item.locations?.room_area ?? ""}`}
-                  />
-                  <Chip label={item.status} size="small" />
-                </ListItemButton>
-              );
-            })}
-          </List>
-        </Paper>
-      )} */}
 
       <Accordion>
         <AccordionSummary expandIcon={<ExpandMore />}>
