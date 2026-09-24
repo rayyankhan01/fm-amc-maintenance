@@ -11,18 +11,20 @@
  */
 export async function getTemplateWithFields(supabase, templateId) {
   const { data: template, error: templateError } = await supabase
-    .from('form_templates')
-    .select('id, name, equipment_type')
-    .eq('id', templateId)
+    .from("form_templates")
+    .select("id, name, equipment_type")
+    .eq("id", templateId)
     .single();
 
   if (templateError) throw templateError;
 
   const { data: fields, error: fieldsError } = await supabase
-    .from('form_fields')
-    .select('id, template_id, field_type, section, label, sort_order, is_mandatory')
-    .eq('template_id', templateId)
-    .order('sort_order', { ascending: true });
+    .from("form_fields")
+    .select(
+      "id, template_id, field_type, section, label, sort_order, is_mandatory",
+    )
+    .eq("template_id", templateId)
+    .order("sort_order", { ascending: true });
 
   if (fieldsError) throw fieldsError;
 
@@ -37,9 +39,9 @@ export async function getTemplateWithFields(supabase, templateId) {
  */
 export async function getTemplateForEquipmentType(supabase, equipmentType) {
   const { data, error } = await supabase
-    .from('form_templates')
-    .select('id, name, equipment_type')
-    .eq('equipment_type', equipmentType)
+    .from("form_templates")
+    .select("id, name, equipment_type")
+    .eq("equipment_type", equipmentType)
     .maybeSingle();
 
   if (error) throw error;
@@ -64,7 +66,7 @@ export async function submitInspection(supabase, input) {
   } = input;
 
   const { data: submission, error: submissionError } = await supabase
-    .from('form_submissions')
+    .from("form_submissions")
     .insert({
       template_id,
       equipment_id,
@@ -72,7 +74,7 @@ export async function submitInspection(supabase, input) {
       inspection_date,
       technician_signature,
     })
-    .select('id')
+    .select("id")
     .single();
 
   if (submissionError) throw submissionError;
@@ -86,7 +88,7 @@ export async function submitInspection(supabase, input) {
   }));
 
   const { error: responsesError } = await supabase
-    .from('form_responses')
+    .from("form_responses")
     .insert(rows);
 
   if (responsesError) throw responsesError;
@@ -101,8 +103,9 @@ export async function submitInspection(supabase, input) {
  */
 export async function getSubmissionWithResponses(supabase, submissionId) {
   const { data, error } = await supabase
-    .from('form_submissions')
-    .select(`
+    .from("form_submissions")
+    .select(
+      `
       id, template_id, equipment_id, technician_id, inspection_date,
       technician_signature, supervisor_signature, submitted_at,
       equipment (
@@ -115,21 +118,24 @@ export async function getSubmissionWithResponses(supabase, submissionId) {
         form_fields ( id, field_type, section, label, sort_order, is_mandatory )
       ),
       form_responses ( id, field_id, result, value, remarks )
-    `)
-    .eq('id', submissionId)
+    `,
+    )
+    .eq("id", submissionId)
     .single();
 
   if (error) throw error;
 
-  data.form_templates.form_fields.sort((left, right) => left.sort_order - right.sort_order);
+  data.form_templates.form_fields.sort(
+    (left, right) => left.sort_order - right.sort_order,
+  );
   return data;
 }
 
 export async function createTemplate(supabase, input) {
   const { data, error } = await supabase
-    .from('form_templates')
+    .from("form_templates")
     .insert(input)
-    .select('id')
+    .select("id")
     .single();
 
   if (error) throw error;
@@ -143,16 +149,15 @@ export async function createTemplate(supabase, input) {
  * @returns {Promise<string>} the new field id
  */
 
-export async function addFormField(supabase,input){
-    const {data,error}= await supabase
-    .from('form_fields')
+export async function addFormField(supabase, input) {
+  const { data, error } = await supabase
+    .from("form_fields")
     .insert(input)
-    .select('id')
-    .single()
+    .select("id")
+    .single();
 
-    if(error) throw error;
-    return data.id
-
+  if (error) throw error;
+  return data.id;
 }
 
 /**
@@ -163,13 +168,13 @@ export async function addFormField(supabase,input){
  * @returns {Promise<void>}
  */
 
-export async function updateFormField(supabase,fieldId, input){
-    const {error} = await supabase
-    .from('form_fields')
+export async function updateFormField(supabase, fieldId, input) {
+  const { error } = await supabase
+    .from("form_fields")
     .update(input)
-    .eq('id', fieldId)
+    .eq("id", fieldId);
 
-    if (error) throw error;
+  if (error) throw error;
 }
 
 /**
@@ -178,13 +183,13 @@ export async function updateFormField(supabase,fieldId, input){
  * @param {string} fieldId
  * @returns {Promise<void>}
  */
-export async function deleteFormField(supabase,fieldId){
-    const {error} = await supabase
-    .from('form_fields')
+export async function deleteFormField(supabase, fieldId) {
+  const { error } = await supabase
+    .from("form_fields")
     .delete()
-    .eq('id',fieldId)
+    .eq("id", fieldId);
 
-    if(error) throw error;
+  if (error) throw error;
 }
 /**
  * Deletes a form template.
@@ -192,11 +197,20 @@ export async function deleteFormField(supabase,fieldId){
  * @param {string} templateId
  * @returns {Promise<void>}
  */
-export async function deleteTemplate(supabase, templateId){
-    const {error} = await supabase
-    .from('form_templates')
+export async function deleteTemplate(supabase, templateId) {
+  const { error } = await supabase
+    .from("form_templates")
     .delete()
-    .eq('id',templateId)
+    .eq("id", templateId);
 
-    if(error) throw error;
+  if (error) throw error;
+}
+
+export async function updateTemplateName(supabase, templateId, name) {
+  const { error } = await supabase
+    .from("form_templates")
+    .update({ name })
+    .eq("id", templateId);
+
+  if (error) throw error;
 }
