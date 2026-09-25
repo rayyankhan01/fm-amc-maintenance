@@ -88,7 +88,7 @@ export default function ChecklistForm({ template, equipment, assetId, technician
           value: field.field_type !== 'checklist_item' ? answer.value ?? null : null,
           remarks: field.field_type === 'checklist_item' ? answer.remarks ?? null : null,
         };
-      });
+      }); 
 
       await submitInspection(supabase, {
         template_id: template.id,
