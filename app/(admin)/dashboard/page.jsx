@@ -18,7 +18,7 @@ const sections = [
   },
   {
     href: "/equipment-types",
-    title: "Device types",
+    title: "Equipment types",
     description: "Manage equipment categories and codes.",
   },
   {

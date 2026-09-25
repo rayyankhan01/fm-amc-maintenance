@@ -4,7 +4,7 @@ const sections = [
   { href: '/users', title: 'Users', description: 'Manage staff accounts, roles, and access.' },
   { href: '/equipment', title: 'Equipment', description: 'Manage assets and equipment categories.' },
   { href: '/locations', title: 'Locations', description: 'Manage sites, rooms, and areas.' },
-  { href: '/equipment-types', title: 'Device types', description: 'Manage equipment categories and codes.' },
+  { href: '/equipment-types', title: 'Equipment types', description: 'Manage equipment categories and codes.' },
   { href: '/templates', title: 'Inspection templates', description: 'Configure fields used by inspections.' },
   { href: '/configuration', title: 'Configuration', description: 'Manage statuses, frequencies, and settings.' },
   { href: '/reports', title: 'Reports', description: 'Review and export inspection data.' },
