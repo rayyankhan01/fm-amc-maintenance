@@ -159,6 +159,15 @@ export async function deleteEquipmentType(id) {
   revalidatePath('/equipment-types');
 }
 
+export async function activateEquipmentType(id) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('equipment_types').update({ is_active: true }).eq('id', id);
+  if (error) throw error;
+  revalidatePath('/equipment-types');
+  revalidatePath('/equipment/new');
+  revalidatePath('/equipment');
+}
+
 export async function createStatusValue(input) {
   const supabase = await requireAdmin();
   const { error } = await supabase.from('status_values').insert({
@@ -223,6 +232,16 @@ export async function deactivateMaintenanceFrequency(id) {
   if (error) throw error;
   revalidatePath('/configuration');
   revalidatePath('/frequencies');
+}
+
+export async function activateMaintenanceFrequency(id) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase.from('maintenance_frequencies').update({ is_active: true }).eq('id', id);
+  if (error) throw error;
+  revalidatePath('/configuration');
+  revalidatePath('/frequencies');
+  revalidatePath('/equipment/new');
+  revalidatePath('/equipment');
 }
 
 export async function createSystemUser(input) {
