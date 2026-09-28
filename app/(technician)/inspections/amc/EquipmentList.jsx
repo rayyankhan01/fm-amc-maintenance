@@ -48,7 +48,7 @@ function renderEquipmentList(items) {
             <ListItemButton
               key={item.id}
               component={Link}
-              href={`/inspections/${item.id}`}
+              href={`/inspections/amc/${item.id}`}
               divider
             >
               <ListItemText

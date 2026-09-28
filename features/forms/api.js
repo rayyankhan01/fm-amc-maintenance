@@ -3,6 +3,8 @@
  * @typedef {import('./types').SubmitInspectionInput} SubmitInspectionInput
  */
 
+import { Suspense } from "react";
+
 /**
  * Fetches a form template with its fields, ordered for rendering.
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase
@@ -87,11 +89,25 @@ export async function submitInspection(supabase, input) {
     remarks: r.remarks ?? null,
   }));
 
-  const { error: responsesError } = await supabase
+  const { data: insertedResponses, error: responsesError } = await supabase
     .from("form_responses")
-    .insert(rows);
+    .insert(rows)
+    .select("id,result");
 
   if (responsesError) throw responsesError;
+
+  const notOkResponses = insertedResponses.filter((r) => r.result === "N_OK");
+  if (notOkResponses.length > 0) {
+    const issueRows = notOkResponses.map((r) => ({
+      response_id: r.id,
+      equipment_id,
+    }));
+    const { error: issuesError } = await supabase
+      .from("maintenance_issues")
+      .insert(issueRows);
+
+    if (issuesError) throw issuesError;
+  }
 
   return submission.id;
 }
@@ -211,6 +227,30 @@ export async function updateTemplateName(supabase, templateId, name) {
     .from("form_templates")
     .update({ name })
     .eq("id", templateId);
+
+  if (error) throw error;
+}
+/**
+ * Marks a maintenance issue resolved, recording who fixed it and how.
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} issueId
+ * @param {{ resolvedBy: string, comment: string }} input
+ * @returns {Promise<void>}
+ */
+export async function resolveMaintenanceIssue(
+  supabase,
+  issueId,
+  { resolvedBy, comment },
+) {
+  const { error } = await supabase
+    .from("maintenance_issues")
+    .update({
+      status: "resolved",
+      resolved_at: new Date().toISOString(),
+      resolved_by: resolvedBy,
+      resolution_comment: comment,
+    })
+    .eq("id", issueId);
 
   if (error) throw error;
 }
