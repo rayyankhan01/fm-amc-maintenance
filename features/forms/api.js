@@ -109,7 +109,7 @@ export async function getSubmissionWithResponses(supabase, submissionId) {
       id, template_id, equipment_id, technician_id, inspection_date,
       technician_signature, supervisor_signature, submitted_at,
       equipment (
-        id, equipment_type_code, equipment_type, unit_number, name,
+        id, asset_id, equipment_type_code, equipment_type, unit_number, name,
         locations ( site_code, site_name, room_area )
       ),
       profiles ( name, emp_id ),

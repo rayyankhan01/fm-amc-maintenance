@@ -15,7 +15,7 @@ export default async function InspectionsPage() {
     supabase
       .from("equipment")
       .select(
-        "id, equipment_type_id, equipment_type_code, equipment_type, unit_number, name, status, locations (site_code, room_area)",
+        "id, asset_id, equipment_type_id, equipment_type_code, equipment_type, unit_number, name, status, locations (site_code, room_area)",
       )
       .order("unit_number", { ascending: true }),
     supabase.from("equipment_types").select("id, code ,name").order("name"),

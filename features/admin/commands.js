@@ -74,12 +74,18 @@ function equipmentInput(input) {
   };
 }
 
+function equipmentAssetId(siteCode, equipmentTypeCode, unitNumber) {
+  return `${required(siteCode, 'Site code')}/${required(equipmentTypeCode, 'Equipment type code').toUpperCase()}/${unitNumber}`;
+}
+
 export async function createAdminEquipment(input) {
   const supabase = await requireAdmin();
   const locationId = await findOrCreateAdminLocation(supabase, input);
   const values = equipmentInput(input);
   if (!Number.isInteger(values.unit_number) || values.unit_number < 1) throw new Error('Unit number must be a positive whole number.');
-  const { error } = await supabase.from('equipment').insert({ ...values, location_id: locationId });
+  const { data: location, error: locationError } = await supabase.from('locations').select('site_code').eq('id', locationId).single();
+  if (locationError) throw locationError;
+  const { error } = await supabase.from('equipment').insert({ ...values, asset_id: equipmentAssetId(location.site_code, values.equipment_type_code, values.unit_number), location_id: locationId });
   if (error) throw error;
   revalidatePath('/equipment');
 }
@@ -89,7 +95,9 @@ export async function updateAdminEquipment(input) {
   const locationId = await findOrCreateAdminLocation(supabase, input);
   const values = equipmentInput(input);
   if (!Number.isInteger(values.unit_number) || values.unit_number < 1) throw new Error('Unit number must be a positive whole number.');
-  const { error } = await supabase.from('equipment').update({ ...values, location_id: locationId }).eq('id', input.id);
+  const { data: location, error: locationError } = await supabase.from('locations').select('site_code').eq('id', locationId).single();
+  if (locationError) throw locationError;
+  const { error } = await supabase.from('equipment').update({ ...values, asset_id: equipmentAssetId(location.site_code, values.equipment_type_code, values.unit_number), location_id: locationId }).eq('id', input.id);
   if (error) throw error;
   revalidatePath('/equipment');
   revalidatePath(`/equipment/${input.id}`);

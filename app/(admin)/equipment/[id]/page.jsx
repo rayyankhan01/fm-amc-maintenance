@@ -48,7 +48,7 @@ export default async function EditEquipmentPage({ params }) {
     supabase
       .from("equipment")
       .select(
-        "id, equipment_type_id, equipment_type, equipment_type_code, unit_number, name, status, amc_frequency, locations(site_code, site_name, room_area)",
+        "id, asset_id, equipment_type_id, equipment_type, equipment_type_code, unit_number, name, status, amc_frequency, locations(site_code, site_name, room_area)",
       )
       .eq("id", id)
       .single(),
@@ -78,6 +78,7 @@ export default async function EditEquipmentPage({ params }) {
         action={updateAdminEquipment}
         initialValues={{
           id: equipment.id,
+          asset_id: equipment.asset_id ?? "",
           equipment_type_id: equipment.equipment_type_id ?? "",
           equipment_type: equipment.equipment_type ?? "",
           equipment_type_code: equipment.equipment_type_code,

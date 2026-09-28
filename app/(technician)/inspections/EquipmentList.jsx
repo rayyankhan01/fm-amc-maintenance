@@ -33,7 +33,7 @@ import { useMemo, useState } from "react";
 
 //helper function to get asset id in renderEquipmentList and in the search Function
 function getAssetId(item) {
-  return `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`;
+  return item.asset_id ?? `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`;
 }
 function renderEquipmentList(items) {
   if (items.length === 0) {

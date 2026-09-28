@@ -20,7 +20,7 @@ export default async function AdminEquipmentPage() {
   const { data: equipment, error } = await supabase
     .from("equipment")
     .select(
-      "id, equipment_type_code, unit_number, name, equipment_type, status, amc_frequency, locations(site_code, site_name, room_area), equipment_types(code, name)",
+      "id, asset_id, equipment_type_code, unit_number, name, equipment_type, status, amc_frequency, locations(site_code, site_name, room_area), equipment_types(code, name)",
     )
     .order("unit_number");
   if (error) throw error;
@@ -53,7 +53,7 @@ export default async function AdminEquipmentPage() {
               const location = item.locations ?? {};
               return (
                 <TableRow key={item.id}>
-                  <TableCell>{`${location.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`}</TableCell>
+                  <TableCell>{item.asset_id ?? `${location.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`}</TableCell>
                   <TableCell>{item.name ?? "-"}</TableCell>
                   <TableCell>{item.equipment_types?.name ?? "-"}</TableCell>
                   <TableCell>

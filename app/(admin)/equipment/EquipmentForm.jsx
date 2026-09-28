@@ -25,6 +25,12 @@ export default function EquipmentForm({
     setValues((current) => ({ ...current, [name]: value }));
   }
 
+  const assetId = [values.site_code, values.equipment_type_code, values.unit_number]
+    .map((value) => String(value ?? "").trim())
+    .every(Boolean)
+    ? `${String(values.site_code).trim()}/${String(values.equipment_type_code).trim().toUpperCase()}/${values.unit_number}`
+    : "";
+
   async function handleTypeCodeBlur() {
     if (values.id) return; // don't recalculate when editing existing equipment
     const code = values.equipment_type_code?.trim();
@@ -60,6 +66,12 @@ export default function EquipmentForm({
 
   return (
     <Stack component="form" onSubmit={handleSubmit} spacing={2}>
+      <TextField
+        label="Asset ID"
+        value={assetId || values.asset_id || ""}
+        slotProps={{ input: { readOnly: true } }}
+        helperText="Generated from the site code, equipment type code, and unit number."
+      />
       <TextField
         select
         required

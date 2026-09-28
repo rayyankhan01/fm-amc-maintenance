@@ -6,7 +6,7 @@ export default async function AdminReportsPage() {
   const supabase = await createClient();
   const { data: submissions, error } = await supabase
     .from('form_submissions')
-    .select('id, inspection_date, submitted_at, equipment ( equipment_type_code, unit_number, locations ( site_code, site_name, room_area ) ), profiles ( name ), form_templates ( name )')
+    .select('id, inspection_date, submitted_at, equipment ( asset_id, equipment_type_code, unit_number, locations ( site_code, site_name, room_area ) ), profiles ( name ), form_templates ( name )')
     .order('inspection_date', { ascending: false })
     .limit(100);
 
