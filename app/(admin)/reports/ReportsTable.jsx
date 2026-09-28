@@ -21,10 +21,17 @@ function reportEquipment(submission) {
     : '-';
 }
 
+function reportLocation(submission) {
+  const location = submission.equipment?.locations;
+  if (!location) return '-';
+  return [location.site_name, location.site_code, location.room_area].filter(Boolean).join(' / ') || '-';
+}
+
 export default function ReportsTable({ submissions }) {
   const [search, setSearch] = useState('');
   const [templateFilter, setTemplateFilter] = useState('all');
   const [technicianFilter, setTechnicianFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('');
 
   const templates = useMemo(
@@ -35,6 +42,10 @@ export default function ReportsTable({ submissions }) {
     () => [...new Set(submissions.map((item) => item.profiles?.name).filter(Boolean))].sort(),
     [submissions]
   );
+  const locations = useMemo(
+    () => [...new Set(submissions.map((item) => reportLocation(item)).filter((location) => location !== '-'))].sort(),
+    [submissions]
+  );
 
   const filteredSubmissions = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -42,19 +53,22 @@ export default function ReportsTable({ submissions }) {
       const template = submission.form_templates?.name ?? '';
       const technician = submission.profiles?.name ?? '';
       const equipment = reportEquipment(submission);
+      const location = reportLocation(submission);
       const matchesSearch = !normalizedSearch || [
         submission.inspection_date,
         template,
         technician,
         equipment,
+        location,
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
 
       return matchesSearch
         && (templateFilter === 'all' || template === templateFilter)
         && (technicianFilter === 'all' || technician === technicianFilter)
+          && (locationFilter === 'all' || location === locationFilter)
         && (!dateFilter || submission.inspection_date === dateFilter);
     });
-  }, [dateFilter, search, submissions, templateFilter, technicianFilter]);
+        }, [dateFilter, locationFilter, search, submissions, templateFilter, technicianFilter]);
 
   return (
     <Stack spacing={2}>
@@ -87,6 +101,16 @@ export default function ReportsTable({ submissions }) {
           {technicians.map((technician) => <MenuItem key={technician} value={technician}>{technician}</MenuItem>)}
         </TextField>
         <TextField
+          select
+          label="Location"
+          value={locationFilter}
+          onChange={(event) => setLocationFilter(event.target.value)}
+          sx={{ minWidth: { md: 220 } }}
+        >
+          <MenuItem value="all">All locations</MenuItem>
+          {locations.map((location) => <MenuItem key={location} value={location}>{location}</MenuItem>)}
+        </TextField>
+        <TextField
           type="date"
           label="Inspection date"
           value={dateFilter}
@@ -107,6 +131,7 @@ export default function ReportsTable({ submissions }) {
               <TableCell>Date</TableCell>
               <TableCell>Template</TableCell>
               <TableCell>Equipment</TableCell>
+              <TableCell>Location</TableCell>
               <TableCell>Technician</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -117,12 +142,13 @@ export default function ReportsTable({ submissions }) {
                 <TableCell>{submission.inspection_date}</TableCell>
                 <TableCell>{submission.form_templates?.name ?? '-'}</TableCell>
                 <TableCell>{reportEquipment(submission)}</TableCell>
+                <TableCell>{reportLocation(submission)}</TableCell>
                 <TableCell>{submission.profiles?.name ?? '-'}</TableCell>
                 <TableCell><Button href={`/reports/${submission.id}`}>View</Button></TableCell>
               </TableRow>
             ))}
             {filteredSubmissions.length === 0 && (
-              <TableRow><TableCell colSpan={5}><Typography color="text.secondary">No reports match the selected filters.</Typography></TableCell></TableRow>
+              <TableRow><TableCell colSpan={6}><Typography color="text.secondary">No reports match the selected filters.</Typography></TableCell></TableRow>
             )}
           </TableBody>
         </Table>
