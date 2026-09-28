@@ -14,6 +14,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Stack,
 } from "@mui/material";
 import { ExpandMore } from "@mui/icons-material";
 import { useMemo, useState } from "react";
@@ -67,25 +68,32 @@ export default function EquipmentList({
   equipment,
   equipmentTypes,
   submissions,
+  locations,
 }) {
   const [selectedTypeId, setSelectedTypeId] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [selectedLocationId, setSelectedLocationId] = useState("");
   const filteredEquipment = useMemo(() => {
     const byType = selectedTypeId
       ? equipment.filter((item) => item.equipment_type_id === selectedTypeId)
       : equipment;
+    const byLocation = selectedLocationId
+      ? byType.filter(
+          (item) => item.locations?.site_code === selectedLocationId,
+        )
+      : byType;
 
-    if (!searchText.trim()) return byType;
+    if (!searchText.trim()) return byLocation;
 
     const query = searchText.trim().toLowerCase();
-    return byType.filter((item) => {
+    return byLocation.filter((item) => {
       const assetId = getAssetId(item);
       return (
         assetId.toLowerCase().includes(query) ||
         (item.name ?? "").toLowerCase().includes(query)
       );
     });
-  }, [equipment, selectedTypeId, searchText]);
+  }, [equipment, selectedTypeId, searchText, selectedLocationId]);
 
   //filtering though the equipments to see whether the
   //submissions table has a entry with the matching equipment id
@@ -116,20 +124,36 @@ export default function EquipmentList({
           }}
           sx={{ mb: 2 }}
         />
-        <TextField
-          select
-          label="Equipment Type"
-          fullWidth
-          value={selectedTypeId}
-          onChange={(e) => setSelectedTypeId(e.target.value)}
-        >
-          <MenuItem value="">All Types</MenuItem>
-          {equipmentTypes.map((type) => (
-            <MenuItem key={type.id} value={type.id}>
-              {type.name}
-            </MenuItem>
-          ))}
-        </TextField>
+        <Stack direction="row" spacing={2}>
+          <TextField
+            select
+            label="Equipment Type"
+            value={selectedTypeId}
+            fullWidth
+            onChange={(e) => setSelectedTypeId(e.target.value)}
+          >
+            <MenuItem value="">All Types</MenuItem>
+            {equipmentTypes.map((type) => (
+              <MenuItem key={type.id} value={type.id}>
+                {type.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Location"
+            value={selectedLocationId}
+            fullWidth
+            onChange={(e) => setSelectedLocationId(e.target.value)}
+          >
+            <MenuItem value="">All Locations</MenuItem>
+            {locations.map((loc) => (
+              <MenuItem key={loc.site_code} value={loc.site_code}>
+                {loc.site_code}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
       </Box>
 
       <Accordion>

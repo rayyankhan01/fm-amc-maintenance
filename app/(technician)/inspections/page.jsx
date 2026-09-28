@@ -10,6 +10,7 @@ export default async function InspectionsPage() {
     { data: equipment, error },
     { data: equipmentTypes, error: typesError },
     { data: submissions, error: submissionError },
+    { data: locations, error: locationsError },
   ] = await Promise.all([
     supabase
       .from("equipment")
@@ -22,13 +23,27 @@ export default async function InspectionsPage() {
       .from("form_submissions")
       .select("equipment_id")
       .order("submitted_at"),
+    supabase
+      .from("locations")
+      .select("id,site_code,site_name")
+      .order("site_code"),
   ]);
   const submittedIds = new Set(
     submissions?.map((row) => row.equipment_id) ?? [],
   );
+
+  const uniqueSites = new Map();
+  for (const row of locations ?? []) {
+    if (!uniqueSites.has(row.site_code)) {
+      uniqueSites.set(row.site_code, row);
+    }
+  }
+  const sites = Array.from(uniqueSites.values());
+
   if (error) throw error;
   if (typesError) throw typesError;
   if (submissionError) throw submissionError;
+  if (locationsError) throw locationsError;
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
@@ -57,6 +72,7 @@ export default async function InspectionsPage() {
         equipment={equipment}
         equipmentTypes={equipmentTypes}
         submissions={submittedIds}
+        locations={sites}
       />
     </Container>
   );
