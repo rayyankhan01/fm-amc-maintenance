@@ -33,7 +33,10 @@ import { useMemo, useState } from "react";
 
 //helper function to get asset id in renderEquipmentList and in the search Function
 function getAssetId(item) {
-  return item.asset_id ?? `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`;
+  return (
+    item.asset_id ??
+    `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`
+  );
 }
 function renderEquipmentList(items) {
   if (items.length === 0) {
@@ -53,7 +56,7 @@ function renderEquipmentList(items) {
             >
               <ListItemText
                 primary={item.name ?? item.equipment_type}
-                secondary={`${assetId}· ${item.locations?.room_area ?? ""}`}
+                secondary={`${assetId}· ${item.locations?.room_area ? `Room ${item.locations.room_area}` : ""}`}
               />
               <Chip label={item.status} size="small" />
             </ListItemButton>

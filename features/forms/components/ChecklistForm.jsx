@@ -1,12 +1,20 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { submitInspection } from '../api';
-import ChecklistItemField from './ChecklistItemField';
-import SignaturePad from './SignaturePad';
-import { Box, Typography, Paper, TextField, Alert, Button, Stack } from '@mui/material';
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { submitInspection } from "../api";
+import ChecklistItemField from "./ChecklistItemField";
+import SignaturePad from "./SignaturePad";
+import {
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  Alert,
+  Button,
+  Stack,
+} from "@mui/material";
 
 /**
  * Generic form renderer: reads a template's fields and renders whatever
@@ -19,7 +27,12 @@ import { Box, Typography, Paper, TextField, Alert, Button, Stack } from '@mui/ma
  *   technician: { id: string, name: string } | null,
  * }} props
  */
-export default function ChecklistForm({ template, equipment, assetId, technician }) {
+export default function ChecklistForm({
+  template,
+  equipment,
+  assetId,
+  technician,
+}) {
   const router = useRouter();
   const [answers, setAnswers] = useState({});
   const [signature, setSignature] = useState(null);
@@ -27,12 +40,16 @@ export default function ChecklistForm({ template, equipment, assetId, technician
   const [submitting, setSubmitting] = useState(false);
 
   const sections = useMemo(() => {
-    const headerFields = template.fields.filter((f) => f.field_type !== 'checklist_item');
-    const checklistFields = template.fields.filter((f) => f.field_type === 'checklist_item');
+    const headerFields = template.fields.filter(
+      (f) => f.field_type !== "checklist_item",
+    );
+    const checklistFields = template.fields.filter(
+      (f) => f.field_type === "checklist_item",
+    );
 
     const grouped = [];
     for (const field of checklistFields) {
-      const section = field.section?.trim() || 'Inspection checklist';
+      const section = field.section?.trim() || "Inspection checklist";
       const last = grouped[grouped.length - 1];
       if (last && last.section === section) {
         last.fields.push(field);
@@ -53,9 +70,9 @@ export default function ChecklistForm({ template, equipment, assetId, technician
       if (!field.is_mandatory) continue;
       const answer = answers[field.id];
 
-      if (field.field_type === 'checklist_item') {
+      if (field.field_type === "checklist_item") {
         if (!answer?.result) return `"${field.label}" is required.`;
-        if (answer.result === 'N_OK' && !answer.remarks?.trim()) {
+        if (answer.result === "N_OK" && !answer.remarks?.trim()) {
           return `Remarks are required for "${field.label}" since it's marked NOT OK.`;
         }
       } else if (!answer?.value?.trim()) {
@@ -63,7 +80,7 @@ export default function ChecklistForm({ template, equipment, assetId, technician
       }
     }
 
-    if (!signature) return 'Technician signature is required.';
+    if (!signature) return "Technician signature is required.";
     return null;
   }
 
@@ -84,11 +101,20 @@ export default function ChecklistForm({ template, equipment, assetId, technician
         const answer = answers[field.id] ?? {};
         return {
           field_id: field.id,
-          result: field.field_type === 'checklist_item' ? answer.result ?? null : null,
-          value: field.field_type !== 'checklist_item' ? answer.value ?? null : null,
-          remarks: field.field_type === 'checklist_item' ? answer.remarks ?? null : null,
+          result:
+            field.field_type === "checklist_item"
+              ? (answer.result ?? null)
+              : null,
+          value:
+            field.field_type !== "checklist_item"
+              ? (answer.value ?? null)
+              : null,
+          remarks:
+            field.field_type === "checklist_item"
+              ? (answer.remarks ?? null)
+              : null,
         };
-      }); 
+      });
 
       await submitInspection(supabase, {
         template_id: template.id,
@@ -99,10 +125,10 @@ export default function ChecklistForm({ template, equipment, assetId, technician
         responses,
       });
 
-      router.push('/inspections');
+      router.push("/inspections/amc");
       router.refresh();
     } catch (submitError) {
-      setError(submitError.message ?? 'Failed to submit inspection.');
+      setError(submitError.message ?? "Failed to submit inspection.");
       setSubmitting(false);
     }
   }
@@ -111,7 +137,7 @@ export default function ChecklistForm({ template, equipment, assetId, technician
     <Box component="form" onSubmit={handleSubmit}>
       <Typography variant="h5">{template.name}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        {assetId} · {technician?.name ?? 'Unknown technician'} ·{' '}
+        {assetId} · {technician?.name ?? "Unknown technician"} ·{" "}
         {new Date().toLocaleDateString()}
       </Typography>
 
@@ -123,11 +149,17 @@ export default function ChecklistForm({ template, equipment, assetId, technician
                 key={field.id}
                 label={field.label}
                 required={field.is_mandatory}
-                type={field.field_type === 'date' ? 'date' : 'text'}
-                value={answers[field.id]?.value ?? ''}
-                onChange={(e) => updateAnswer(field.id, { value: e.target.value })}
+                type={field.field_type === "date" ? "date" : "text"}
+                value={answers[field.id]?.value ?? ""}
+                onChange={(e) =>
+                  updateAnswer(field.id, { value: e.target.value })
+                }
                 fullWidth
-                slotProps={field.field_type === 'date' ? { inputLabel: { shrink: true } } : undefined}
+                slotProps={
+                  field.field_type === "date"
+                    ? { inputLabel: { shrink: true } }
+                    : undefined
+                }
               />
             ))}
           </Stack>
@@ -135,7 +167,11 @@ export default function ChecklistForm({ template, equipment, assetId, technician
       )}
 
       {sections.checklistSections.map((group, index) => (
-        <Paper key={`${group.section ?? 'inspection'}-${index}`} variant="outlined" sx={{ p: 2, mb: 3 }}>
+        <Paper
+          key={`${group.section ?? "inspection"}-${index}`}
+          variant="outlined"
+          sx={{ p: 2, mb: 3 }}
+        >
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
             {group.section}
           </Typography>
@@ -164,7 +200,7 @@ export default function ChecklistForm({ template, equipment, assetId, technician
       )}
 
       <Button type="submit" variant="contained" fullWidth disabled={submitting}>
-        {submitting ? 'Submitting...' : 'Submit Inspection'}
+        {submitting ? "Submitting..." : "Submit Inspection"}
       </Button>
     </Box>
   );

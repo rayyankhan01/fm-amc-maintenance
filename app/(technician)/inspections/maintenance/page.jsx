@@ -7,10 +7,12 @@ import {
   ListItemText,
   Chip,
   Stack,
+  Button,
 } from "@mui/material";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import LogoutButton from "@/features/auth/components/LogoutButton";
+
 export default async function MaintenancePage() {
   const supabase = await createClient();
 
@@ -52,6 +54,11 @@ export default async function MaintenancePage() {
         <Typography variant="h5" sx={{ mb: 3 }}>
           Maintenance
         </Typography>
+        <Link href="/inspections/amc" style={{ textDecoration: "none" }}>
+          <Button variant="contained" sx={{ mb: 3 }}>
+            AMC
+          </Button>
+        </Link>
         <LogoutButton />
       </Stack>
 

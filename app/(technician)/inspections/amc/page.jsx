@@ -1,8 +1,8 @@
-import { Container, Typography, Stack } from "@mui/material";
+import { Container, Typography, Stack, Button } from "@mui/material";
 import { createClient } from "@/lib/supabase/server";
 import EquipmentList from "./EquipmentList";
 import LogoutButton from "@/features/auth/components/LogoutButton";
-
+import Link from "next/link";
 export default async function InspectionsPage() {
   const supabase = await createClient();
 
@@ -58,7 +58,14 @@ export default async function InspectionsPage() {
         <Typography variant="h5" sx={{ mb: 3 }}>
           Select Equipment
         </Typography>
-
+        <Link
+          href="/inspections/maintenance"
+          style={{ textDecoration: "none" }}
+        >
+          <Button variant="contained" sx={{ mb: 3 }}>
+            Maintenance
+          </Button>
+        </Link>
         <LogoutButton />
       </Stack>
       <Stack>
@@ -66,6 +73,11 @@ export default async function InspectionsPage() {
           NOTE : The status is currently visual, so it does not update once the
           deadline is due
         </Typography>
+        <Link href="/inspections/amc/new" style={{ textDecoration: "none" }}>
+          <Button variant="outlined" sx={{ mb: 3 }}>
+            Equipment not listed? Add it here
+          </Button>
+        </Link>
       </Stack>
 
       <EquipmentList
