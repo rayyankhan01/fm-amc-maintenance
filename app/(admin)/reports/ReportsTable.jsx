@@ -17,7 +17,7 @@ import {
 
 function reportEquipment(submission) {
   return submission.equipment
-    ? `${submission.equipment.equipment_type_code}/${submission.equipment.unit_number}`
+    ? submission.equipment.asset_id ?? `${submission.equipment.equipment_type_code}/${submission.equipment.unit_number}`
     : '-';
 }
 

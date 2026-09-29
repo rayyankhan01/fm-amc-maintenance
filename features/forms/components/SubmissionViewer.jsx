@@ -53,7 +53,7 @@ export default function SubmissionViewer({ submission }) {
   const location = equipment.locations ?? {};
   const technician = submission.profiles?.name ?? '-';
   const assetId = equipment.id
-    ? `${location.site_code ?? '?'}/${equipment.equipment_type_code ?? '?'}/${equipment.unit_number ?? '?'}`
+    ? equipment.asset_id ?? `${location.site_code ?? '?'}/${equipment.equipment_type_code ?? '?'}/${equipment.unit_number ?? '?'}`
     : '-';
 
   return (
