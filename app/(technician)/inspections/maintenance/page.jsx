@@ -6,9 +6,11 @@ import {
   ListItemButton,
   ListItemText,
   Chip,
+  Stack,
 } from "@mui/material";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import LogoutButton from "@/features/auth/components/LogoutButton";
 export default async function MaintenancePage() {
   const supabase = await createClient();
 
@@ -39,9 +41,20 @@ export default async function MaintenancePage() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>
-        Maintenance
-      </Typography>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 4,
+        }}
+      >
+        <Typography variant="h5" sx={{ mb: 3 }}>
+          Maintenance
+        </Typography>
+        <LogoutButton />
+      </Stack>
+
       {groups.length === 0 ? (
         <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
           No open maintenance issues.
