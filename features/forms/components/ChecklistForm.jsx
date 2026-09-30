@@ -189,6 +189,9 @@ export default function ChecklistForm({
       <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
         <Typography variant="subtitle1" sx={{ mb: 1 }}>
           Technician Signature
+          <Typography component="span" color="error">
+            {" *"}
+          </Typography>
         </Typography>
         <SignaturePad onChange={setSignature} />
       </Paper>
