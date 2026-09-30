@@ -6,6 +6,23 @@ import { createClient } from "@/lib/supabase/client";
 import { getNextUnitNumber } from "@/features/equipment/api";
 import { Alert, Button, MenuItem, Stack, TextField } from "@mui/material";
 
+function formatDate(value) {
+  const match = String(value ?? "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
+}
+
+function parseDate(value) {
+  const match = String(value).trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return "";
+  const [, day, month, year] = match;
+  const date = new Date(`${year}-${month}-${day}T00:00:00Z`);
+  return date.getUTCFullYear() === Number(year) &&
+    date.getUTCMonth() + 1 === Number(month) &&
+    date.getUTCDate() === Number(day)
+    ? `${year}-${month}-${day}`
+    : "";
+}
+
 export default function EquipmentForm({
   action,
   initialValues,
@@ -20,6 +37,7 @@ export default function EquipmentForm({
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [checkingUnitNumber, setCheckingUnitNumber] = useState(false);
+  const [amcDateInput, setAmcDateInput] = useState(formatDate(initialValues.amc_date));
 
   function update(name, value) {
     setValues((current) => ({ ...current, [name]: value }));
@@ -30,6 +48,14 @@ export default function EquipmentForm({
     .every(Boolean)
     ? `${String(values.site_code).trim()}/${String(values.equipment_type_code).trim().toUpperCase()}/${values.unit_number}`
     : "";
+  const selectedFrequency = frequencies.find((item) => item.code === values.amc_frequency);
+  const nextAmcDate = values.amc_date && selectedFrequency?.interval_days
+    ? (() => {
+        const date = new Date(`${values.amc_date}T00:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + selectedFrequency.interval_days);
+        return date.toISOString().slice(0, 10);
+      })()
+    : values.next_amc_date || "";
 
   async function handleTypeCodeBlur() {
     if (values.id) return; // don't recalculate when editing existing equipment
@@ -175,6 +201,25 @@ export default function EquipmentForm({
           </MenuItem>
         ))}
       </TextField>
+      <TextField
+        required
+        type="text"
+        label="AMC date"
+        value={amcDateInput}
+        placeholder="dd/mm/yyyy"
+        onChange={(event) => {
+          const inputDate = event.target.value;
+          setAmcDateInput(inputDate);
+          update("amc_date", parseDate(inputDate) || inputDate);
+        }}
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
+      <TextField
+        label="Next AMC date"
+        value={formatDate(nextAmcDate)}
+        slotProps={{ input: { readOnly: true } }}
+        helperText="Calculated from the AMC date and selected frequency."
+      />
       {error && <Alert severity="error">{error}</Alert>}
       <Button type="submit" variant="contained" disabled={saving}>
         {saving ? "Saving..." : submitLabel}

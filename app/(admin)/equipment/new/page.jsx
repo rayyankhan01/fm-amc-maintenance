@@ -18,7 +18,7 @@ async function getLookups(supabase) {
       .order("sort_order"),
     supabase
       .from("maintenance_frequencies")
-      .select("code, label")
+      .select("code, label, interval_days")
       .eq("is_active", true)
       .order("label"),
     supabase.from("locations").select("site_code,site_name").order("site_code"),
@@ -61,6 +61,8 @@ export default async function NewEquipmentPage() {
           room_area: "",
           status: lookups.statuses[0]?.code ?? "",
           amc_frequency: lookups.frequencies[0]?.code ?? "",
+          amc_date: "",
+          next_amc_date: "",
         }}
         {...lookups}
         submitLabel="Add equipment"

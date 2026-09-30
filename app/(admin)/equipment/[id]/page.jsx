@@ -18,7 +18,7 @@ async function getLookups(supabase) {
       .order("sort_order"),
     supabase
       .from("maintenance_frequencies")
-      .select("code, label")
+      .select("code, label, interval_days")
       .eq("is_active", true)
       .order("label"),
     supabase.from("locations").select("site_code,site_name").order("site_code"),
@@ -48,13 +48,14 @@ export default async function EditEquipmentPage({ params }) {
     supabase
       .from("equipment")
       .select(
-        "id, asset_id, equipment_type_id, equipment_type, equipment_type_code, unit_number, name, status, amc_frequency, locations(site_code, site_name, room_area)",
+        "id, asset_id, equipment_type_id, equipment_type, equipment_type_code, unit_number, name, status, amc_frequency, amc_date, next_amc_date, locations(site_code, site_name, room_area)",
       )
       .eq("id", id)
       .single(),
     getLookups(supabase),
   ]);
-  if (error || !equipment) notFound();
+  if (error) throw error;
+  if (!equipment) notFound();
   const location = equipment.locations ?? {};
   const status =
     lookups.statuses.find(
@@ -89,6 +90,8 @@ export default async function EditEquipmentPage({ params }) {
           room_area: location.room_area ?? "",
           status,
           amc_frequency: amcFrequency,
+          amc_date: equipment.amc_date ?? "",
+          next_amc_date: equipment.next_amc_date ?? "",
         }}
         {...lookups}
         submitLabel="Save equipment"

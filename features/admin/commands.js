@@ -63,6 +63,8 @@ async function findOrCreateAdminLocation(supabase, input) {
 }
 
 function equipmentInput(input) {
+  const amcDate = required(input.amc_date, 'AMC date');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(amcDate)) throw new Error('AMC date must be a valid date.');
   return {
     equipment_type_id: required(input.equipment_type_id, 'Equipment category'),
     equipment_type: required(input.equipment_type, 'Equipment type'),
@@ -71,7 +73,23 @@ function equipmentInput(input) {
     name: required(input.name, 'Equipment name'),
     status: toPascalDisplay(input.status, 'Equipment status'),
     amc_frequency: toPascalDisplay(input.amc_frequency, 'AMC frequency'),
+    amc_date: amcDate,
   };
+}
+
+async function addNextAmcDate(supabase, values, frequencyCode) {
+  const { data: frequency, error } = await supabase
+    .from('maintenance_frequencies')
+    .select('interval_days')
+    .eq('code', required(frequencyCode, 'AMC frequency'))
+    .single();
+  if (error) throw error;
+  if (!frequency.interval_days) {
+    throw new Error('The selected AMC frequency must have an interval in days.');
+  }
+  const nextDate = new Date(`${values.amc_date}T00:00:00Z`);
+  nextDate.setUTCDate(nextDate.getUTCDate() + frequency.interval_days);
+  return { ...values, next_amc_date: nextDate.toISOString().slice(0, 10) };
 }
 
 function equipmentAssetId(siteCode, equipmentTypeCode, unitNumber) {
@@ -81,7 +99,7 @@ function equipmentAssetId(siteCode, equipmentTypeCode, unitNumber) {
 export async function createAdminEquipment(input) {
   const supabase = await requireAdmin();
   const locationId = await findOrCreateAdminLocation(supabase, input);
-  const values = equipmentInput(input);
+  const values = await addNextAmcDate(supabase, equipmentInput(input), input.amc_frequency);
   if (!Number.isInteger(values.unit_number) || values.unit_number < 1) throw new Error('Unit number must be a positive whole number.');
   const { data: location, error: locationError } = await supabase.from('locations').select('site_code').eq('id', locationId).single();
   if (locationError) throw locationError;
@@ -93,7 +111,7 @@ export async function createAdminEquipment(input) {
 export async function updateAdminEquipment(input) {
   const supabase = await requireAdmin();
   const locationId = await findOrCreateAdminLocation(supabase, input);
-  const values = equipmentInput(input);
+  const values = await addNextAmcDate(supabase, equipmentInput(input), input.amc_frequency);
   if (!Number.isInteger(values.unit_number) || values.unit_number < 1) throw new Error('Unit number must be a positive whole number.');
   const { data: location, error: locationError } = await supabase.from('locations').select('site_code').eq('id', locationId).single();
   if (locationError) throw locationError;
