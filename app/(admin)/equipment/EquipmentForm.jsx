@@ -6,23 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { getNextUnitNumber } from "@/features/equipment/api";
 import { Alert, Button, MenuItem, Stack, TextField } from "@mui/material";
 
-function formatDate(value) {
-  const match = String(value ?? "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
-}
-
-function parseDate(value) {
-  const match = String(value).trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!match) return "";
-  const [, day, month, year] = match;
-  const date = new Date(`${year}-${month}-${day}T00:00:00Z`);
-  return date.getUTCFullYear() === Number(year) &&
-    date.getUTCMonth() + 1 === Number(month) &&
-    date.getUTCDate() === Number(day)
-    ? `${year}-${month}-${day}`
-    : "";
-}
-
 export default function EquipmentForm({
   action,
   initialValues,
@@ -37,7 +20,6 @@ export default function EquipmentForm({
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [checkingUnitNumber, setCheckingUnitNumber] = useState(false);
-  const [amcDateInput, setAmcDateInput] = useState(formatDate(initialValues.amc_date));
 
   function update(name, value) {
     setValues((current) => ({ ...current, [name]: value }));
@@ -203,21 +185,20 @@ export default function EquipmentForm({
       </TextField>
       <TextField
         required
-        type="text"
+        type="date"
         label="AMC date"
-        value={amcDateInput}
-        placeholder="dd/mm/yyyy"
-        onChange={(event) => {
-          const inputDate = event.target.value;
-          setAmcDateInput(inputDate);
-          update("amc_date", parseDate(inputDate) || inputDate);
-        }}
+        value={values.amc_date}
+        onChange={(event) => update("amc_date", event.target.value)}
         slotProps={{ inputLabel: { shrink: true } }}
       />
       <TextField
+        type="date"
         label="Next AMC date"
-        value={formatDate(nextAmcDate)}
-        slotProps={{ input: { readOnly: true } }}
+        value={nextAmcDate}
+        slotProps={{
+          input: { readOnly: true },
+          inputLabel: { shrink: true },
+        }}
         helperText="Calculated from the AMC date and selected frequency."
       />
       {error && <Alert severity="error">{error}</Alert>}
