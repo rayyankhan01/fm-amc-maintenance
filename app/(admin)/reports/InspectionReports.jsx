@@ -42,7 +42,7 @@ export default function InspectionReports({ reportData }) {
 
   return <Stack spacing={2}>
     <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable">
-      <Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed (Priority 1)" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
+      <Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
     </Tabs>
     {tab === 'equipment' && <><TextField select label="Location" value={location} onChange={(event) => setLocation(event.target.value)} sx={{ maxWidth: 320 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField><Typography color="text.secondary">Complete AMC schedule and inspection history by equipment.</Typography><ScheduleTable rows={filteredEquipment} /></>}
     {tab === 'completed' && <CompletedTable rows={reportData.completed} />}
