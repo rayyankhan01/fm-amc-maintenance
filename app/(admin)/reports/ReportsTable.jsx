@@ -13,7 +13,9 @@ import {
   TableRow,
   TextField,
   Typography,
+  TablePagination,
 } from '@mui/material';
+import { exportCsv } from './reportUtils';
 
 function reportEquipment(submission) {
   return submission.equipment
@@ -33,6 +35,8 @@ export default function ReportsTable({ submissions }) {
   const [technicianFilter, setTechnicianFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const templates = useMemo(
     () => [...new Set(submissions.map((item) => item.form_templates?.name).filter(Boolean))].sort(),
@@ -69,6 +73,11 @@ export default function ReportsTable({ submissions }) {
         && (!dateFilter || submission.inspection_date === dateFilter);
     });
         }, [dateFilter, locationFilter, search, submissions, templateFilter, technicianFilter]);
+        const visibleSubmissions = filteredSubmissions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+        function resetPage() { setPage(0); }
+        function exportReports() {
+          exportCsv('inspection-reports.csv', ['Date', 'Template', 'Equipment', 'Location', 'Technician'], filteredSubmissions.map((item) => [item.inspection_date, item.form_templates?.name, reportEquipment(item), reportLocation(item), item.profiles?.name]));
+        }
 
   return (
     <Stack spacing={2}>
@@ -77,14 +86,14 @@ export default function ReportsTable({ submissions }) {
           label="Search reports"
           placeholder="Date, template, equipment, technician"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => { setSearch(event.target.value); resetPage(); }}
           fullWidth
         />
         <TextField
           select
           label="Template"
           value={templateFilter}
-          onChange={(event) => setTemplateFilter(event.target.value)}
+          onChange={(event) => { setTemplateFilter(event.target.value); resetPage(); }}
           sx={{ minWidth: { md: 220 } }}
         >
           <MenuItem value="all">All templates</MenuItem>
@@ -94,7 +103,7 @@ export default function ReportsTable({ submissions }) {
           select
           label="Technician"
           value={technicianFilter}
-          onChange={(event) => setTechnicianFilter(event.target.value)}
+          onChange={(event) => { setTechnicianFilter(event.target.value); resetPage(); }}
           sx={{ minWidth: { md: 180 } }}
         >
           <MenuItem value="all">All technicians</MenuItem>
@@ -104,7 +113,7 @@ export default function ReportsTable({ submissions }) {
           select
           label="Location"
           value={locationFilter}
-          onChange={(event) => setLocationFilter(event.target.value)}
+          onChange={(event) => { setLocationFilter(event.target.value); resetPage(); }}
           sx={{ minWidth: { md: 220 } }}
         >
           <MenuItem value="all">All locations</MenuItem>
@@ -114,11 +123,12 @@ export default function ReportsTable({ submissions }) {
           type="date"
           label="Inspection date"
           value={dateFilter}
-          onChange={(event) => setDateFilter(event.target.value)}
+          onChange={(event) => { setDateFilter(event.target.value); resetPage(); }}
           slotProps={{ inputLabel: { shrink: true } }}
           sx={{ minWidth: { md: 170 } }}
         />
       </Stack>
+      <Button variant="outlined" onClick={exportReports} sx={{ alignSelf: 'flex-start' }}>Export CSV</Button>
 
       <Typography variant="body2" color="text.secondary">
         Showing {filteredSubmissions.length} of {submissions.length} reports
@@ -137,7 +147,7 @@ export default function ReportsTable({ submissions }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredSubmissions.map((submission) => (
+            {visibleSubmissions.map((submission) => (
               <TableRow key={submission.id}>
                 <TableCell>{submission.inspection_date}</TableCell>
                 <TableCell>{submission.form_templates?.name ?? '-'}</TableCell>
@@ -147,12 +157,13 @@ export default function ReportsTable({ submissions }) {
                 <TableCell><Button href={`/reports/${submission.id}`}>View</Button></TableCell>
               </TableRow>
             ))}
-            {filteredSubmissions.length === 0 && (
+            {visibleSubmissions.length === 0 && (
               <TableRow><TableCell colSpan={6}><Typography color="text.secondary">No reports match the selected filters.</Typography></TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </Paper>
+      <TablePagination component="div" count={filteredSubmissions.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }} rowsPerPageOptions={[10, 25, 50]} />
     </Stack>
   );
 }
