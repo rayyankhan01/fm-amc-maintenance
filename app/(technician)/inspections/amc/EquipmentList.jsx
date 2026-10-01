@@ -17,7 +17,7 @@ import {
   Stack,
 } from "@mui/material";
 import { ExpandMore } from "@mui/icons-material";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 /**
  * @param {{ equipment: Array<{
@@ -76,6 +76,14 @@ export default function EquipmentList({
   const [selectedTypeId, setSelectedTypeId] = useState("");
   const [searchText, setSearchText] = useState("");
   const [selectedLocationId, setSelectedLocationId] = useState("");
+  const [pendingExpanded, setPendingExpanded] = useState(true);
+  const [submittedExpanded, setSubmittedExpanded] = useState(false);
+  useEffect(() => {
+    if (searchText.trim() || selectedTypeId || selectedLocationId) {
+      setPendingExpanded(true);
+      //setSubmittedExpanded(true);
+    }
+  }, [searchText, selectedTypeId, selectedLocationId]);
   const filteredEquipment = useMemo(() => {
     const byType = selectedTypeId
       ? equipment.filter((item) => item.equipment_type_id === selectedTypeId)
@@ -98,14 +106,18 @@ export default function EquipmentList({
     });
   }, [equipment, selectedTypeId, searchText, selectedLocationId]);
 
+  const today = new Date().toISOString().slice(0, 10);
+
   //filtering though the equipments to see whether the
   //submissions table has a entry with the matching equipment id
-  const pendingEquipment = filteredEquipment.filter(
-    (item) => !submissions.has(item.id),
-  );
-  const submittedEquipment = filteredEquipment.filter((item) =>
-    submissions.has(item.id),
-  );
+  const pendingEquipment = filteredEquipment.filter((item) => {
+    if (item.next_amc_date) return item.next_amc_date <= today;
+    return !submissions.has(item.id);
+  });
+  const submittedEquipment = filteredEquipment.filter((item) => {
+    if (item.next_amc_date) return item.next_amc_date > today;
+    return submissions.has(item.id);
+  });
   if (equipment.length === 0) {
     return (
       <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
@@ -159,7 +171,10 @@ export default function EquipmentList({
         </Stack>
       </Box>
 
-      <Accordion>
+      <Accordion
+        expanded={pendingExpanded}
+        onChange={() => setPendingExpanded((prev) => !prev)}
+      >
         <AccordionSummary expandIcon={<ExpandMore />}>
           <Typography>Pending ({pendingEquipment.length})</Typography>
         </AccordionSummary>
@@ -167,7 +182,10 @@ export default function EquipmentList({
           {renderEquipmentList(pendingEquipment)}
         </AccordionDetails>
       </Accordion>
-      <Accordion>
+      <Accordion
+      // expanded={submittedExpanded}
+      // onChange={() => setSubmittedExpanded((prev) => !prev)}
+      >
         <AccordionSummary expandIcon={<ExpandMore />}>
           <Typography>Submitted ({submittedEquipment.length})</Typography>
         </AccordionSummary>

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Container, Alert } from "@mui/material";
+import { Container, Alert, Button } from "@mui/material";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/features/forms/api";
 import ChecklistForm from "@/features/forms/components/ChecklistForm";
 import SubmissionViewer from "@/features/forms/components/SubmissionViewer";
+import Link from "next/link";
 
 export default async function InspectionFormPage({ params }) {
   const { id } = await params;
@@ -33,6 +34,9 @@ export default async function InspectionFormPage({ params }) {
         maxWidth="sm"
         sx={{ py: 4, "& .manager-signature-slot": { display: "none" } }}
       >
+        <Link href="/inspections/amc" style={{ textDecoration: "none" }}>
+          <Button sx={{ mb: 2 }}>Back</Button>
+        </Link>
         <SubmissionViewer submission={submission} />
       </Container>
     );
@@ -59,6 +63,15 @@ export default async function InspectionFormPage({ params }) {
           No inspection template exists for equipment type &quot;
           {equipment.equipment_type}&quot; yet.
         </Alert>
+        <Link
+          href="/inspections/amc"
+          fullWidth
+          style={{ textDecoration: "none" }}
+        >
+          <Button fullWidth sx={{ mb: 4 }}>
+            Back
+          </Button>
+        </Link>
       </Container>
     );
   }
@@ -69,6 +82,9 @@ export default async function InspectionFormPage({ params }) {
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Link href="/inspections/amc" style={{ textDecoration: "none" }}>
+        <Button sx={{ mb: 2 }}>Back</Button>
+      </Link>
       <ChecklistForm
         template={templateWithFields}
         equipment={equipment}
