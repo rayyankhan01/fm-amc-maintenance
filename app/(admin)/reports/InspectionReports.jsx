@@ -66,12 +66,20 @@ export default function InspectionReports({ reportData }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const locations = [...new Set(reportData.equipment.map(locationLabel).filter((value) => value !== '-'))].sort();
   const selectedRows = tab === 'equipment' ? reportData.equipment : tab === 'completed' ? reportData.completed : tab === 'pending' ? reportData.pending : tab === 'overdue' ? reportData.overdue : reportData.nok;
   const filteredRows = selectedRows.filter((item) => {
     const equipment = tab === 'equipment' || tab === 'pending' || tab === 'overdue' ? equipmentLabel(item) : item.equipment?.asset_id ?? '';
     const text = [equipment, item.name, item.amc_frequency, item.inspection_date, item.profiles?.name, item.form_templates?.name, locationLabel(item)].filter(Boolean).join(' ').toLowerCase();
-    return (!search || text.includes(search.toLowerCase())) && (tab !== 'equipment' || location === 'all' || locationLabel(item) === location) && (tab !== 'equipment' || status === 'all' || item.scheduleStatus === status);
+    const inspectionDates = tab === 'equipment' || tab === 'pending' || tab === 'overdue'
+      ? item.history.map((inspection) => inspection.inspection_date)
+      : [item.inspection_date];
+    const matchesDateRange = inspectionDates.some((inspectionDate) =>
+      inspectionDate && (!fromDate || inspectionDate >= fromDate) && (!toDate || inspectionDate <= toDate),
+    );
+    return (!search || text.includes(search.toLowerCase())) && (!fromDate && !toDate || matchesDateRange) && (tab !== 'equipment' || location === 'all' || locationLabel(item) === location) && (tab !== 'equipment' || status === 'all' || item.scheduleStatus === status);
   });
   const visibleRows = filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   function exportCurrent() {
@@ -84,6 +92,8 @@ export default function InspectionReports({ reportData }) {
     </Tabs>
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
       <TextField label="Search report" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Equipment, date, technician" fullWidth />
+      <TextField type="date" label="From date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); setPage(0); }} slotProps={{ inputLabel: { shrink: true } }} />
+      <TextField type="date" label="To date" value={toDate} onChange={(event) => { setToDate(event.target.value); setPage(0); }} slotProps={{ inputLabel: { shrink: true } }} />
       {tab === 'equipment' && <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); setPage(0); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>}
       {tab === 'equipment' && <TextField select label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0); }} sx={{ minWidth: 160 }}><MenuItem value="all">All statuses</MenuItem><MenuItem value="pending">Pending</MenuItem><MenuItem value="overdue">Overdue</MenuItem><MenuItem value="completed">Completed</MenuItem></TextField>}
     </Stack>
