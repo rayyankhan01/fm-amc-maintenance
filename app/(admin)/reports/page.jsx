@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
-import { Container, Divider, Stack, Typography } from '@mui/material';
+import { Container, Typography } from '@mui/material';
 import { getInspectionReportData } from '@/features/reports/api';
-import ReportsTable from './ReportsTable';
-import InspectionReports from './InspectionReports';
+import ReportsTabs from './ReportsTabs';
 
 export default async function AdminReportsPage() {
   const supabase = await createClient();
@@ -19,13 +18,8 @@ export default async function AdminReportsPage() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Latest Inspection</Typography>
-      <Stack spacing={4}>
-        <ReportsTable submissions={submissions ?? []} />
-        <Divider />
-        <Typography variant="h5">Consolidated Inspection Reports</Typography>
-        <InspectionReports reportData={reportData} />
-      </Stack>
+      <Typography variant="h4" sx={{ mb: 3 }}>Inspection Reports</Typography>
+      <ReportsTabs submissions={submissions ?? []} reportData={reportData} />
     </Container>
   );
 }

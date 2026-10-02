@@ -16,6 +16,7 @@ import {
   TablePagination,
 } from '@mui/material';
 import { exportCsv } from './reportUtils';
+import { printReport } from './reportPrint';
 
 function reportEquipment(submission) {
   return submission.equipment
@@ -74,6 +75,11 @@ export default function ReportsTable({ submissions }) {
     });
         }, [dateFilter, locationFilter, search, submissions, templateFilter, technicianFilter]);
         const visibleSubmissions = filteredSubmissions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+        function exportPdf() {
+          setPage(0);
+          setRowsPerPage(Math.max(filteredSubmissions.length, 1));
+          window.setTimeout(() => printReport('Latest inspection report', 'print-latest-report'), 0);
+        }
         function resetPage() { setPage(0); }
         function exportReports() {
           exportCsv('inspection-reports.csv', ['Date', 'Template', 'Equipment', 'Location', 'Technician'], filteredSubmissions.map((item) => [item.inspection_date, item.form_templates?.name, reportEquipment(item), reportLocation(item), item.profiles?.name]));
@@ -128,7 +134,10 @@ export default function ReportsTable({ submissions }) {
           sx={{ minWidth: { md: 170 } }}
         />
       </Stack>
-      <Button variant="outlined" onClick={exportReports} sx={{ alignSelf: 'flex-start' }}>Export CSV</Button>
+      <Stack className="report-print-control" direction="row" spacing={1} sx={{ alignSelf: 'flex-start' }}>
+        {/* <Button variant="outlined" onClick={exportReports}>Export CSV</Button> */}
+        <Button variant="outlined" onClick={exportPdf}>Export PDF</Button>
+      </Stack>
 
       <Typography variant="body2" color="text.secondary">
         Showing {filteredSubmissions.length} of {submissions.length} reports

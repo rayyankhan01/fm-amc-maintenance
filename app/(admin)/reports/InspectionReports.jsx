@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Tabs, TextField, Typography } from '@mui/material';
 import { exportCsv } from './reportUtils';
+import { printReport } from './reportPrint';
 
 function equipmentLabel(item) {
   return item.asset_id ?? `${item.equipment_type_code}/${item.unit_number}`;
@@ -82,6 +83,11 @@ export default function InspectionReports({ reportData }) {
     return (!search || text.includes(search.toLowerCase())) && (!fromDate && !toDate || matchesDateRange) && (tab !== 'equipment' || location === 'all' || locationLabel(item) === location) && (tab !== 'equipment' || status === 'all' || item.scheduleStatus === status);
   });
   const visibleRows = filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  function exportPdf() {
+    setPage(0);
+    setRowsPerPage(Math.max(filteredRows.length, 1));
+    window.setTimeout(() => printReport(`${tab} inspection report`, 'print-consolidated-report'), 0);
+  }
   function exportCurrent() {
     exportCsv(`${tab}-inspection-report.csv`, ['Date', 'Equipment', 'Location', 'Status'], filteredRows.map((item) => [item.inspection_date ?? item.next_amc_date, tab === 'equipment' ? equipmentLabel(item) : item.equipment?.asset_id, locationLabel(item), item.scheduleStatus ?? 'completed']));
   }
@@ -97,7 +103,10 @@ export default function InspectionReports({ reportData }) {
       {tab === 'equipment' && <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); setPage(0); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>}
       {tab === 'equipment' && <TextField select label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0); }} sx={{ minWidth: 160 }}><MenuItem value="all">All statuses</MenuItem><MenuItem value="pending">Pending</MenuItem><MenuItem value="overdue">Overdue</MenuItem><MenuItem value="completed">Completed</MenuItem></TextField>}
     </Stack>
-    <Button variant="outlined" onClick={exportCurrent} sx={{ alignSelf: 'flex-start' }}>Export CSV</Button>
+    <Stack className="report-print-control" direction="row" spacing={1} sx={{ alignSelf: 'flex-start' }}>
+      {/* <Button variant="outlined" onClick={exportCurrent}>Export CSV</Button> */}
+      <Button variant="outlined" onClick={exportPdf}>Export PDF</Button>
+    </Stack>
     <Typography color="text.secondary">Showing {visibleRows.length} of {filteredRows.length} records.</Typography>
     {tab === 'equipment' && <><Typography color="text.secondary">Complete AMC schedule and inspection history by equipment.</Typography><ScheduleTable rows={visibleRows} /></>}
     {tab === 'completed' && <CompletedTable rows={visibleRows} />}
