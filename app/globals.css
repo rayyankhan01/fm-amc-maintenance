@@ -3,6 +3,18 @@ body {
 }
 
 @media print {
+  body.print-latest-report .consolidated-report-section,
+  body.print-latest-report .report-section-divider,
+  body.print-latest-report .consolidated-report-heading {
+    display: none !important;
+  }
+
+  body.print-consolidated-report .latest-report-section,
+  body.print-consolidated-report .report-section-divider,
+  body.print-consolidated-report .consolidated-report-heading {
+    display: none !important;
+  }
+
   @page {
     size: A4;
     margin: 14mm;
@@ -13,6 +25,12 @@ body {
   }
 
   .report-print-control {
+    display: none !important;
+  }
+
+  .MuiTabs-root,
+  .MuiTablePagination-root,
+  .MuiFormControl-root {
     display: none !important;
   }
 
