@@ -1,8 +1,16 @@
 import { redirect } from "next/navigation";
-import { Container, Typography, Paper, Stack, Divider } from "@mui/material";
+import {
+  Container,
+  Typography,
+  Paper,
+  Stack,
+  Divider,
+  Button,
+} from "@mui/material";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import ResolveForm from "./ResolveForm";
+import Link from "next/link";
 
 export default async function MaintenanceIssuePage({ params }) {
   const { id } = await params;
@@ -30,12 +38,29 @@ export default async function MaintenanceIssuePage({ params }) {
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Typography variant="h5" sx={{ mb: 1 }}>
-        {equipment.name ?? equipment.equipment_type}
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        {assetId}
-      </Typography>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ justifyContent: "space-between", mb: 3 }}
+      >
+        <Stack direction="column" spacing={0.5} sx={{ mb: 1 }}>
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            {equipment.name ?? equipment.equipment_type}
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            {assetId}
+          </Typography>
+        </Stack>
+
+        <Link
+          href="/inspections/maintenance"
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <Button variant="outlined" sx={{ mb: 3 }}>
+            Back to Maintenance Inspections
+          </Button>
+        </Link>
+      </Stack>
 
       <Stack spacing={3}>
         {issues.map((issue) => {

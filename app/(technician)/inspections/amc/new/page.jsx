@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { Container, Typography } from "@mui/material";
+import { Container, Typography, Stack, Button } from "@mui/material";
+import Link from "next/link";
 import QuickAddForm from "./QuickAddForm";
 export default async function QuickAddEquipmentPage() {
   const supabase = await createClient();
@@ -31,9 +32,24 @@ export default async function QuickAddEquipmentPage() {
   const sites = Array.from(uniqueSites.values());
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>
-        Add Equipment & Inspect
-      </Typography>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 4,
+        }}
+      >
+        <Typography variant="h5" sx={{ mb: 3 }}>
+          Add Equipment & Inspect
+        </Typography>
+        <Link href="/inspections/amc" style={{ textDecoration: "none" }}>
+          <Button variant="contained" sx={{ mb: 3 }}>
+            Back to AMC
+          </Button>
+        </Link>
+      </Stack>
+
       <QuickAddForm equipmentTypes={equipmentTypes} sites={sites} />
     </Container>
   );

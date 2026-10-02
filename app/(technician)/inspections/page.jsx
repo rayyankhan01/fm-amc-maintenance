@@ -1,3 +1,4 @@
+import LogoutButton from "@/features/auth/components/LogoutButton";
 import { Container, Grid, Paper, Typography } from "@mui/material";
 import Link from "next/link";
 
@@ -5,7 +6,7 @@ export default function InspectionsHomePage() {
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Typography variant="h5" sx={{ mb: 4, textAlign: "center" }}>
-        Select
+        Select Inspection Type
       </Typography>
       <Grid container spacing={2}>
         <Grid size={6}>
@@ -27,6 +28,9 @@ export default function InspectionsHomePage() {
               Maintenance
             </Paper>
           </Link>
+        </Grid>
+        <Grid size={12} sx={{ mt: 4, textAlign: "center" }}>
+          <LogoutButton />
         </Grid>
       </Grid>
     </Container>

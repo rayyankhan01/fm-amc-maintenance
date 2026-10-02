@@ -12,6 +12,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import LogoutButton from "@/features/auth/components/LogoutButton";
+import MaintenanceList from "./MaintenanceList";
 
 export default async function MaintenancePage() {
   const supabase = await createClient();
@@ -61,39 +62,7 @@ export default async function MaintenancePage() {
         </Link>
         <LogoutButton />
       </Stack>
-
-      {groups.length === 0 ? (
-        <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
-          No open maintenance issues.
-        </Typography>
-      ) : (
-        <Paper variant="outlined">
-          <List disablePadding>
-            {groups.map(({ equipment, issues }) => {
-              const assetId = `${equipment.locations?.site_code ?? "?"}/${equipment.equipment_type_code}/${equipment.unit_number}`;
-              return (
-                <Link
-                  key={equipment.id}
-                  href={`/inspections/maintenance/${equipment.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <ListItemButton divider>
-                    <ListItemText
-                      primary={equipment.name ?? equipment.equipment_type}
-                      secondary={assetId}
-                    />
-                    <Chip
-                      label={`${issues.length} open`}
-                      size="small"
-                      color="error"
-                    />
-                  </ListItemButton>
-                </Link>
-              );
-            })}
-          </List>
-        </Paper>
-      )}
+      <MaintenanceList groups={groups} />
     </Container>
   );
 }
