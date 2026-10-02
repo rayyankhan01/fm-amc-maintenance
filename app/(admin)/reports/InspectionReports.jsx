@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Chip, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Tabs, TextField, Typography } from '@mui/material';
+import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Tabs, TextField, Typography } from '@mui/material';
 import { exportCsv } from './reportUtils';
 
 function equipmentLabel(item) {
@@ -13,12 +13,36 @@ function locationLabel(item) {
   return location ? [location.site_name, location.site_code, location.room_area].filter(Boolean).join(' / ') : '-';
 }
 
+function InspectionHistoryDialog({ equipment }) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <Button size="small" onClick={() => setOpen(true)} disabled={equipment.history.length === 0}>
+      {equipment.history.length ? `View (${equipment.history.length})` : 'No history'}
+    </Button>
+    <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+      <DialogTitle>Inspection history: {equipmentLabel(equipment)}</DialogTitle>
+      <DialogContent dividers>
+        <Table size="small">
+          <TableHead><TableRow><TableCell>Date</TableCell><TableCell>Template</TableCell><TableCell>Technician</TableCell><TableCell /></TableRow></TableHead>
+          <TableBody>{equipment.history.map((inspection) => <TableRow key={inspection.id}>
+            <TableCell>{inspection.inspection_date}</TableCell>
+            <TableCell>{inspection.form_templates?.name ?? '-'}</TableCell>
+            <TableCell>{inspection.profiles?.name ?? '-'}</TableCell>
+            <TableCell><Button size="small" href={`/reports/${inspection.id}`}>View</Button></TableCell>
+          </TableRow>)}</TableBody>
+        </Table>
+      </DialogContent>
+      <DialogActions><Button onClick={() => setOpen(false)}>Close</Button></DialogActions>
+    </Dialog>
+  </>;
+}
+
 function ScheduleTable({ rows }) {
   return <Paper variant="outlined" sx={{ overflowX: 'auto' }}><Table size="small"><TableHead><TableRow>
     <TableCell>Equipment</TableCell><TableCell>Name</TableCell><TableCell>Location</TableCell><TableCell>Frequency</TableCell><TableCell>Next AMC</TableCell><TableCell>Inspection history</TableCell><TableCell>Status</TableCell>
   </TableRow></TableHead><TableBody>
     {rows.map((item) => <TableRow key={item.id}>
-      <TableCell>{equipmentLabel(item)}</TableCell><TableCell>{item.name ?? '-'}</TableCell><TableCell>{locationLabel(item)}</TableCell><TableCell>{item.amc_frequency ?? '-'}</TableCell><TableCell>{item.next_amc_date ?? '-'}</TableCell><TableCell>{item.history.map((inspection) => inspection.inspection_date).join(', ') || '-'}</TableCell><TableCell><Chip size="small" label={item.scheduleStatus} color={item.scheduleStatus === 'overdue' ? 'error' : item.scheduleStatus === 'pending' ? 'warning' : 'success'} /></TableCell>
+      <TableCell>{equipmentLabel(item)}</TableCell><TableCell>{item.name ?? '-'}</TableCell><TableCell>{locationLabel(item)}</TableCell><TableCell>{item.amc_frequency ?? '-'}</TableCell><TableCell>{item.next_amc_date ?? '-'}</TableCell><TableCell><InspectionHistoryDialog equipment={item} /></TableCell><TableCell><Chip size="small" label={item.scheduleStatus} color={item.scheduleStatus === 'overdue' ? 'error' : item.scheduleStatus === 'pending' ? 'warning' : 'success'} /></TableCell>
     </TableRow>)}
     {rows.length === 0 && <TableRow><TableCell colSpan={7}>No records found.</TableCell></TableRow>}
   </TableBody></Table></Paper>;
