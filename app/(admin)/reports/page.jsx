@@ -19,7 +19,7 @@ export default async function AdminReportsPage() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Inspection report</Typography>
+      <Typography variant="h4" sx={{ mb: 3 }}>Latest Inspection</Typography>
       <Stack spacing={4}>
         <ReportsTable submissions={submissions ?? []} />
         <Divider />

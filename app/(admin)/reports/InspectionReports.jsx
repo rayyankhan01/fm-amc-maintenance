@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Chip, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from '@mui/material';
+import { Button, Chip, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Tabs, TextField, Typography } from '@mui/material';
+import { exportCsv } from './reportUtils';
 
 function equipmentLabel(item) {
   return item.asset_id ?? `${item.equipment_type_code}/${item.unit_number}`;
@@ -37,17 +38,38 @@ function CompletedTable({ rows, nokOnly = false }) {
 export default function InspectionReports({ reportData }) {
   const [tab, setTab] = useState('equipment');
   const [location, setLocation] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const locations = [...new Set(reportData.equipment.map(locationLabel).filter((value) => value !== '-'))].sort();
-  const filteredEquipment = reportData.equipment.filter((item) => location === 'all' || locationLabel(item) === location);
+  const selectedRows = tab === 'equipment' ? reportData.equipment : tab === 'completed' ? reportData.completed : tab === 'pending' ? reportData.pending : tab === 'overdue' ? reportData.overdue : reportData.nok;
+  const filteredRows = selectedRows.filter((item) => {
+    const equipment = tab === 'equipment' || tab === 'pending' || tab === 'overdue' ? equipmentLabel(item) : item.equipment?.asset_id ?? '';
+    const text = [equipment, item.name, item.amc_frequency, item.inspection_date, item.profiles?.name, item.form_templates?.name, locationLabel(item)].filter(Boolean).join(' ').toLowerCase();
+    return (!search || text.includes(search.toLowerCase())) && (tab !== 'equipment' || location === 'all' || locationLabel(item) === location) && (tab !== 'equipment' || status === 'all' || item.scheduleStatus === status);
+  });
+  const visibleRows = filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  function exportCurrent() {
+    exportCsv(`${tab}-inspection-report.csv`, ['Date', 'Equipment', 'Location', 'Status'], filteredRows.map((item) => [item.inspection_date ?? item.next_amc_date, tab === 'equipment' ? equipmentLabel(item) : item.equipment?.asset_id, locationLabel(item), item.scheduleStatus ?? 'completed']));
+  }
 
   return <Stack spacing={2}>
-    <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable">
+    <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(0); }} variant="scrollable">
       <Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
     </Tabs>
-    {tab === 'equipment' && <><TextField select label="Location" value={location} onChange={(event) => setLocation(event.target.value)} sx={{ maxWidth: 320 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField><Typography color="text.secondary">Complete AMC schedule and inspection history by equipment.</Typography><ScheduleTable rows={filteredEquipment} /></>}
-    {tab === 'completed' && <CompletedTable rows={reportData.completed} />}
-    {tab === 'pending' && <ScheduleTable rows={reportData.pending} />}
-    {tab === 'overdue' && <ScheduleTable rows={reportData.overdue} />}
-    {tab === 'nok' && <CompletedTable rows={reportData.nok} nokOnly />}
+    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+      <TextField label="Search report" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Equipment, date, technician" fullWidth />
+      {tab === 'equipment' && <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); setPage(0); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>}
+      {tab === 'equipment' && <TextField select label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0); }} sx={{ minWidth: 160 }}><MenuItem value="all">All statuses</MenuItem><MenuItem value="pending">Pending</MenuItem><MenuItem value="overdue">Overdue</MenuItem><MenuItem value="completed">Completed</MenuItem></TextField>}
+    </Stack>
+    <Button variant="outlined" onClick={exportCurrent} sx={{ alignSelf: 'flex-start' }}>Export CSV</Button>
+    <Typography color="text.secondary">Showing {visibleRows.length} of {filteredRows.length} records.</Typography>
+    {tab === 'equipment' && <><Typography color="text.secondary">Complete AMC schedule and inspection history by equipment.</Typography><ScheduleTable rows={visibleRows} /></>}
+    {tab === 'completed' && <CompletedTable rows={visibleRows} />}
+    {tab === 'pending' && <ScheduleTable rows={visibleRows} />}
+    {tab === 'overdue' && <ScheduleTable rows={visibleRows} />}
+    {tab === 'nok' && <CompletedTable rows={visibleRows} nokOnly />}
+    <TablePagination component="div" count={filteredRows.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }} rowsPerPageOptions={[10, 25, 50]} />
   </Stack>;
 }
