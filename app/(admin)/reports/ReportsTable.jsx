@@ -149,8 +149,8 @@ export default function ReportsTable({ submissions }) {
         Showing {filteredSubmissions.length} of {submissions.length} reports
       </Typography>
 
-      <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
-        <Table>
+      <Paper className="report-table-paper" variant="outlined" sx={{ overflowX: 'auto' }}>
+        <Table className="report-table">
           <TableHead>
             <TableRow>
               <TableCell>Date</TableCell>
