@@ -40,7 +40,7 @@ function InspectionHistoryDialog({ equipment }) {
 }
 
 function ScheduleTable({ rows }) {
-  return <Paper variant="outlined" sx={{ overflowX: 'auto' }}><Table size="small"><TableHead><TableRow>
+  return <Paper className="report-table-paper" variant="outlined" sx={{ overflowX: 'auto' }}><Table className="report-table" size="small"><TableHead><TableRow>
     <TableCell>Equipment</TableCell><TableCell>Name</TableCell><TableCell>Location</TableCell><TableCell>Frequency</TableCell><TableCell>Next AMC</TableCell><TableCell>Inspection history</TableCell><TableCell>Status</TableCell>
   </TableRow></TableHead><TableBody>
     {rows.map((item) => <TableRow key={item.id}>
@@ -51,7 +51,7 @@ function ScheduleTable({ rows }) {
 }
 
 function CompletedTable({ rows, nokOnly = false }) {
-  return <Paper variant="outlined" sx={{ overflowX: 'auto' }}><Table size="small"><TableHead><TableRow>
+  return <Paper className="report-table-paper" variant="outlined" sx={{ overflowX: 'auto' }}><Table className="report-table" size="small"><TableHead><TableRow>
     <TableCell>Date</TableCell><TableCell>Equipment</TableCell><TableCell>Template</TableCell><TableCell>Technician</TableCell><TableCell>Action</TableCell>
   </TableRow></TableHead><TableBody>
     {rows.map((item) => <TableRow key={item.id}>
