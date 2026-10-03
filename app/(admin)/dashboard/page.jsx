@@ -1,4 +1,6 @@
 import { Container, Grid, Paper, Stack, Typography } from "@mui/material";
+import { createClient } from '@/lib/supabase/server';
+import { getInspectionAlerts } from '@/features/alerts/api';
 import LogoutButton from "@/features/auth/components/LogoutButton";
 const sections = [
   {
@@ -38,7 +40,18 @@ const sections = [
   },
 ];
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const supabase = await createClient();
+  const { due, overdue, newAssets } = await getInspectionAlerts(supabase);
+  const dashboardSections = [
+    {
+      href: '/alerts',
+      title: 'Alerts and notifications',
+      description: `${due.length} due, ${overdue.length} overdue, and ${newAssets.length} new asset${newAssets.length === 1 ? '' : 's'}.`,
+    },
+    ...sections,
+  ];
+
   return (
     <Container maxWidth="lg" sx={{ py: 5 }}>
       <Stack
@@ -58,7 +71,7 @@ export default function AdminDashboardPage() {
         <LogoutButton />
       </Stack>
       <Grid container spacing={2}>
-        {sections.map((section) => (
+        {dashboardSections.map((section) => (
           <Grid key={section.href} size={{ xs: 12, sm: 6, md: 4 }}>
             <Paper
               component="a"
