@@ -10,6 +10,13 @@ function formatDateTime(value) {
   }).format(value);
 }
 
+export function formatReportPeriod(dates) {
+  const validDates = dates.filter(Boolean).sort();
+  if (validDates.length === 0) return 'No inspection dates available';
+  if (validDates[0] === validDates[validDates.length - 1]) return validDates[0];
+  return `${validDates[0]} to ${validDates[validDates.length - 1]}`;
+}
+
 export default function ReportHeader({ title, description, period }) {
   const [generatedAt] = useState(() => new Date());
 

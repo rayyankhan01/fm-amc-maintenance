@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { exportCsv } from './reportUtils';
 import { printReport } from './reportPrint';
+import ReportHeader, { formatReportPeriod } from './ReportHeader';
 
 function reportEquipment(submission) {
   return submission.equipment
@@ -87,6 +88,11 @@ export default function ReportsTable({ submissions }) {
 
   return (
     <Stack spacing={2}>
+      <ReportHeader
+        title="Latest Inspection Report"
+        description="The most recently submitted inspection records."
+        period={dateFilter || formatReportPeriod(submissions.map((submission) => submission.inspection_date))}
+      />
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
         <TextField
           label="Search reports"
