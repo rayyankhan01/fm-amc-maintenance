@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Tabs, TextField, Typography } from '@mui/material';
 import { exportCsv } from './reportUtils';
 import { printReport } from './reportPrint';
+import ReportHeader, { formatReportPeriod } from './ReportHeader';
 
 function equipmentLabel(item) {
   return item.asset_id ?? `${item.equipment_type_code}/${item.unit_number}`;
@@ -92,7 +93,20 @@ export default function InspectionReports({ reportData }) {
     exportCsv(`${tab}-inspection-report.csv`, ['Date', 'Equipment', 'Location', 'Status'], filteredRows.map((item) => [item.inspection_date ?? item.next_amc_date, tab === 'equipment' ? equipmentLabel(item) : item.equipment?.asset_id, locationLabel(item), item.scheduleStatus ?? 'completed']));
   }
 
+  const period = fromDate && toDate
+    ? `${fromDate} to ${toDate}`
+    : fromDate
+      ? `From ${fromDate}`
+      : toDate
+        ? `Until ${toDate}`
+        : formatReportPeriod(reportData.completed.map((submission) => submission.inspection_date));
+
   return <Stack spacing={2}>
+    <ReportHeader
+      title="Consolidated Inspection Report"
+      description="Inspection completion, schedule, status, and checklist results across equipment."
+      period={period}
+    />
     <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(0); }} variant="scrollable">
       <Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
     </Tabs>
