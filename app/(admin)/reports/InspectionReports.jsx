@@ -106,6 +106,7 @@ export default function InspectionReports({ reportData }) {
       title="Consolidated Inspection Report"
       description="Inspection completion, schedule, status, and checklist results across equipment."
       period={period}
+      siteLocation={tab === 'equipment' && location !== 'all' ? location : 'All sites / locations'}
     />
     <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(0); }} variant="scrollable">
       <Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
