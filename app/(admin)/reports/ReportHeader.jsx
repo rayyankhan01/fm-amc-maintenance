@@ -25,7 +25,7 @@ export default function ReportHeader({ title, description, period, siteLocation 
       <Stack spacing={1}>
         <Typography variant="h5">Seven Spikes Group of Companies</Typography>
         <Typography variant="h6" sx={{ pt: 1 }}>{title}</Typography>
-        {/* <Typography variant="body2" color="text.secondary">{description}</Typography> */}
+        <Typography variant="body2" color="text.secondary">{description}</Typography>
         <Typography variant="body2"><strong>Department:</strong> Facilities Management</Typography>
         <Typography variant="body2"><strong>Site/Location:</strong> {siteLocation}</Typography>
         <Typography variant="body2"><strong>Report Period:</strong> {period}</Typography>
