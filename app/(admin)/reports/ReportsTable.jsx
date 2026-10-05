@@ -92,6 +92,7 @@ export default function ReportsTable({ submissions }) {
         title="Latest Inspection Report"
         description="The most recently submitted inspection records."
         period={dateFilter || formatReportPeriod(submissions.map((submission) => submission.inspection_date))}
+        siteLocation={locationFilter === 'all' ? 'All sites / locations' : locationFilter}
       />
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
         <TextField

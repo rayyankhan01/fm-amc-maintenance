@@ -17,7 +17,7 @@ export function formatReportPeriod(dates) {
   return `${validDates[0]} to ${validDates[validDates.length - 1]}`;
 }
 
-export default function ReportHeader({ title, description, period }) {
+export default function ReportHeader({ title, description, period, siteLocation = 'All sites / locations' }) {
   const [generatedAt] = useState(() => new Date());
 
   return (
@@ -25,7 +25,7 @@ export default function ReportHeader({ title, description, period }) {
       <Stack spacing={1}>
         <Typography variant="h5">Seven Spikes</Typography>
         <Typography variant="body2"><strong>Department:</strong> Facilities Management</Typography>
-        <Typography variant="body2"><strong>Site/Location:</strong> All sites / locations</Typography>
+        <Typography variant="body2"><strong>Site/Location:</strong> {siteLocation}</Typography>
         <Typography variant="h6" sx={{ pt: 1 }}>{title}</Typography>
         <Typography variant="body2" color="text.secondary">{description}</Typography>
         <Typography variant="body2"><strong>Report Period:</strong> {period}</Typography>
