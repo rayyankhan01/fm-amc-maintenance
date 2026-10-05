@@ -39,6 +39,7 @@ export async function findOrCreateLocation(supabase, {site_code, room_area}){
  * @property {string | null} name
  * @property {string | null} location_id
  * @property {string} status
+ * @property {boolean} [is_submiited_by_tech]
  */
 
 /**
