@@ -8,16 +8,27 @@ function locationLabel(location) {
 }
 
 export async function getInspectionAlerts(supabase) {
-  const [{ data: equipment, error: equipmentError }, { data: submissions, error: submissionError }] = await Promise.all([
+  const equipmentSelect = 'id, asset_id, equipment_type, equipment_type_code, unit_number, name, amc_frequency, created_at, next_amc_date, is_submiited_by_tech, locations(site_code, site_name, room_area)';
+  const legacyEquipmentSelect = 'id, asset_id, equipment_type, equipment_type_code, unit_number, name, amc_frequency, created_at, next_amc_date, locations(site_code, site_name, room_area)';
+  let [{ data: equipment, error: equipmentError }, { data: submissions, error: submissionError }] = await Promise.all([
     supabase
       .from('equipment')
-      .select('id, asset_id, equipment_type, equipment_type_code, unit_number, name, amc_frequency, created_at, next_amc_date, is_submiited_by_tech, locations(site_code, site_name, room_area)')
+      .select(equipmentSelect)
       .order('next_amc_date', { ascending: true }),
     supabase
       .from('form_submissions')
       .select('id, equipment_id, inspection_date, profiles(name), form_templates(name)')
       .order('inspection_date', { ascending: false }),
   ]);
+
+  if (equipmentError?.code === '42703') {
+    const legacyResult = await supabase
+      .from('equipment')
+      .select(legacyEquipmentSelect)
+      .order('next_amc_date', { ascending: true });
+    equipment = legacyResult.data;
+    equipmentError = legacyResult.error;
+  }
 
   if (equipmentError) throw equipmentError;
   if (submissionError) throw submissionError;
