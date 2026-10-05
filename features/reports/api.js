@@ -6,7 +6,7 @@ export async function getInspectionReportData(supabase) {
       .order('next_amc_date', { ascending: true, nullsFirst: false }),
     supabase
       .from('form_submissions')
-      .select('id, inspection_date, submitted_at, equipment_id, equipment(asset_id, equipment_type_code, unit_number), profiles(name), form_templates(name), form_responses(result)')
+      .select('id, inspection_date, submitted_at, equipment_id, equipment(asset_id, equipment_type_code, unit_number, locations(site_code, site_name, room_area)), profiles(name), form_templates(name), form_responses(result)')
       .order('inspection_date', { ascending: false }),
   ]);
 
