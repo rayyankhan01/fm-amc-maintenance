@@ -44,12 +44,12 @@ export default async function AdminDashboardPage() {
   const supabase = await createClient();
   const { due, overdue, newAssets } = await getInspectionAlerts(supabase);
   const dashboardSections = [
+    ...sections,
     {
       href: '/alerts',
       title: 'Alerts and notifications',
       description: `${due.length} due, ${overdue.length} overdue, and ${newAssets.length} new asset${newAssets.length === 1 ? '' : 's'}.`,
     },
-    ...sections,
   ];
 
   return (
