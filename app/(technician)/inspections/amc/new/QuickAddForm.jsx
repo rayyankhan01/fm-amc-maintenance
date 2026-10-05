@@ -52,6 +52,7 @@ export default function QuickAddForm({ equipmentTypes, sites }) {
         name: null,
         location_id,
         status: "Operational",
+        is_submitted_by_tech: true,
       });
       router.push(`/inspections/amc/${equipmentId}`);
       router.refresh();
