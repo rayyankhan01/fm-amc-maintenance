@@ -101,11 +101,18 @@ export default function InspectionReports({ reportData }) {
       : toDate
         ? `Until ${toDate}`
         : formatReportPeriod(reportData.completed.map((submission) => submission.inspection_date));
+  const descriptionByTab = {
+    equipment: 'Equipment-wise AMC schedule, location, and inspection history.',
+    completed: 'Completed inspection submissions across all equipment.',
+    pending: 'Equipment with inspections due within the active schedule.',
+    overdue: 'Equipment with inspections past their scheduled AMC date.',
+    nok: 'Inspection submissions containing N/OK checklist results.',
+  };
 
   return <Stack spacing={2}>
     <ReportHeader
       title="Consolidated Inspection Report"
-      description="Inspection completion, schedule, status, and checklist results across equipment."
+      description={descriptionByTab[tab]}
       period={period}
       siteLocation={['equipment', 'nok'].includes(tab) && location !== 'all' ? location : 'All sites / locations'}
     />
