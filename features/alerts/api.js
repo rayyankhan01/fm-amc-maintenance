@@ -11,7 +11,7 @@ export async function getInspectionAlerts(supabase) {
   const [{ data: equipment, error: equipmentError }, { data: submissions, error: submissionError }] = await Promise.all([
     supabase
       .from('equipment')
-      .select('id, asset_id, equipment_type, equipment_type_code, unit_number, name, amc_frequency, created_at, next_amc_date, locations(site_code, site_name, room_area)')
+      .select('id, asset_id, equipment_type, equipment_type_code, unit_number, name, amc_frequency, created_at, next_amc_date, is_submiited_by_tech, locations(site_code, site_name, room_area)')
       .order('next_amc_date', { ascending: true }),
     supabase
       .from('form_submissions')
@@ -50,7 +50,9 @@ export async function getInspectionAlerts(supabase) {
     })
     .filter(Boolean);
   const newAssets = (equipment ?? [])
-    .filter((item) => item.created_at && new Date(item.created_at) >= newAssetCutoff)
+    .filter((item) => item.is_submiited_by_tech === true
+      && item.created_at
+      && new Date(item.created_at) >= newAssetCutoff)
     .map((item) => ({
       ...item,
       equipmentLabel: equipmentLabel(item),
