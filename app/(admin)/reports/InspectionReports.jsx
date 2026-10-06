@@ -11,7 +11,7 @@ function equipmentLabel(item) {
 }
 
 function locationLabel(item) {
-  const location = item.locations;
+  const location = item.locations ?? item.equipment?.locations;
   return location ? [location.site_name, location.site_code, location.room_area].filter(Boolean).join(' / ') : '-';
 }
 
@@ -70,8 +70,8 @@ export default function InspectionReports({ reportData }) {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const locations = [...new Set(reportData.equipment.map(locationLabel).filter((value) => value !== '-'))].sort();
   const selectedRows = tab === 'equipment' ? reportData.equipment : tab === 'completed' ? reportData.completed : tab === 'pending' ? reportData.pending : tab === 'overdue' ? reportData.overdue : reportData.nok;
+  const locations = [...new Set([...reportData.equipment, ...reportData.nok].map(locationLabel).filter((value) => value !== '-'))].sort();
   const filteredRows = selectedRows.filter((item) => {
     const equipment = tab === 'equipment' || tab === 'pending' || tab === 'overdue' ? equipmentLabel(item) : item.equipment?.asset_id ?? '';
     const text = [equipment, item.name, item.amc_frequency, item.inspection_date, item.profiles?.name, item.form_templates?.name, locationLabel(item)].filter(Boolean).join(' ').toLowerCase();
@@ -81,7 +81,8 @@ export default function InspectionReports({ reportData }) {
     const matchesDateRange = inspectionDates.some((inspectionDate) =>
       inspectionDate && (!fromDate || inspectionDate >= fromDate) && (!toDate || inspectionDate <= toDate),
     );
-    return (!search || text.includes(search.toLowerCase())) && (!fromDate && !toDate || matchesDateRange) && (tab !== 'equipment' || location === 'all' || locationLabel(item) === location) && (tab !== 'equipment' || status === 'all' || item.scheduleStatus === status);
+    const matchesLocation = !['equipment', 'nok'].includes(tab) || location === 'all' || locationLabel(item) === location;
+    return (!search || text.includes(search.toLowerCase())) && (!fromDate && !toDate || matchesDateRange) && matchesLocation && (tab !== 'equipment' || status === 'all' || item.scheduleStatus === status);
   });
   const visibleRows = filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   function exportPdf() {
@@ -100,13 +101,20 @@ export default function InspectionReports({ reportData }) {
       : toDate
         ? `Until ${toDate}`
         : formatReportPeriod(reportData.completed.map((submission) => submission.inspection_date));
+  const descriptionByTab = {
+    equipment: 'Equipment-wise AMC schedule, location, and inspection history.',
+    completed: 'Completed inspection submissions across all equipment.',
+    pending: 'Equipment with inspections due within the active schedule.',
+    overdue: 'Equipment with inspections past their scheduled AMC date.',
+    nok: 'Inspection submissions containing N/OK checklist results.',
+  };
 
   return <Stack spacing={2}>
     <ReportHeader
       title="Consolidated Inspection Report"
-      description="Inspection completion, schedule, status, and checklist results across equipment."
+      description={descriptionByTab[tab]}
       period={period}
-      siteLocation={tab === 'equipment' && location !== 'all' ? location : 'All sites / locations'}
+      siteLocation={['equipment', 'nok'].includes(tab) && location !== 'all' ? location : 'All sites / locations'}
     />
     <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(0); }} variant="scrollable">
       <Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
@@ -115,7 +123,7 @@ export default function InspectionReports({ reportData }) {
       <TextField label="Search report" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Equipment, date, technician" fullWidth />
       <TextField type="date" label="From date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); setPage(0); }} slotProps={{ inputLabel: { shrink: true } }} />
       <TextField type="date" label="To date" value={toDate} onChange={(event) => { setToDate(event.target.value); setPage(0); }} slotProps={{ inputLabel: { shrink: true } }} />
-      {tab === 'equipment' && <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); setPage(0); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>}
+      {['equipment', 'nok'].includes(tab) && <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); setPage(0); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>}
       {tab === 'equipment' && <TextField select label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(0); }} sx={{ minWidth: 160 }}><MenuItem value="all">All statuses</MenuItem><MenuItem value="pending">Pending</MenuItem><MenuItem value="overdue">Overdue</MenuItem><MenuItem value="completed">Completed</MenuItem></TextField>}
     </Stack>
     <Stack className="report-print-control" direction="row" spacing={1} sx={{ alignSelf: 'flex-start' }}>

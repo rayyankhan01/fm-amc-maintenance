@@ -23,11 +23,11 @@ export default function ReportHeader({ title, description, period, siteLocation 
   return (
     <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
       <Stack spacing={1}>
-        <Typography variant="h5">Seven Spikes</Typography>
-        <Typography variant="body2"><strong>Department:</strong> Facilities Management</Typography>
-        <Typography variant="body2"><strong>Site/Location:</strong> {siteLocation}</Typography>
+        <Typography variant="h5">Seven Spikes Group of Companies</Typography>
         <Typography variant="h6" sx={{ pt: 1 }}>{title}</Typography>
         <Typography variant="body2" color="text.secondary">{description}</Typography>
+        <Typography variant="body2"><strong>Department:</strong> Facilities Management</Typography>
+        <Typography variant="body2"><strong>Site/Location:</strong> {siteLocation}</Typography>
         <Typography variant="body2"><strong>Report Period:</strong> {period}</Typography>
         <Typography variant="body2"><strong>Generate Date/Time:</strong> {formatDateTime(generatedAt)}</Typography>
       </Stack>
