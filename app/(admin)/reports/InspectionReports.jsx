@@ -5,6 +5,7 @@ import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuIt
 import { exportCsv } from './reportUtils';
 import { printReport } from './reportPrint';
 import ReportHeader, { formatReportPeriod } from './ReportHeader';
+import SummaryReport from './SummaryReport';
 
 function equipmentLabel(item) {
   return item.asset_id ?? `${item.equipment_type_code}/${item.unit_number}`;
@@ -62,7 +63,7 @@ function CompletedTable({ rows, nokOnly = false }) {
 }
 
 export default function InspectionReports({ reportData }) {
-  const [tab, setTab] = useState('equipment');
+  const [tab, setTab] = useState('summary');
   const [location, setLocation] = useState('all');
   const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
@@ -102,6 +103,7 @@ export default function InspectionReports({ reportData }) {
         ? `Until ${toDate}`
         : formatReportPeriod(reportData.completed.map((submission) => submission.inspection_date));
   const descriptionByTab = {
+    summary: 'Summary of completed inspections and maintenance requirements.',
     equipment: 'Equipment-wise AMC schedule, location, and inspection history.',
     completed: 'Completed inspection submissions across all equipment.',
     pending: 'Equipment with inspections due within the active schedule.',
@@ -111,14 +113,16 @@ export default function InspectionReports({ reportData }) {
 
   return <Stack spacing={2}>
     <ReportHeader
-      title="Consolidated Inspection Report"
+      title={tab === 'summary' ? 'Inspection Summary Report' : 'Consolidated Inspection Report'}
       description={descriptionByTab[tab]}
       period={period}
       siteLocation={['equipment', 'nok'].includes(tab) && location !== 'all' ? location : 'All sites / locations'}
     />
     <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(0); }} variant="scrollable">
-      <Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
+      <Tab value="summary" label="Summary" /><Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
     </Tabs>
+    {tab === 'summary' && <SummaryReport submissions={reportData.completed} />}
+    {tab !== 'summary' && <>
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
       <TextField label="Search report" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Equipment, date, technician" fullWidth />
       <TextField type="date" label="From date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); setPage(0); }} slotProps={{ inputLabel: { shrink: true } }} />
@@ -137,5 +141,6 @@ export default function InspectionReports({ reportData }) {
     {tab === 'overdue' && <ScheduleTable rows={visibleRows} />}
     {tab === 'nok' && <CompletedTable rows={visibleRows} nokOnly />}
     <TablePagination component="div" count={filteredRows.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }} rowsPerPageOptions={[10, 25, 50]} />
+    </>}
   </Stack>;
 }
