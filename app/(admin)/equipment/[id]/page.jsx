@@ -85,7 +85,7 @@ export default async function EditEquipmentPage({ params }) {
           equipment_type_code: equipment.equipment_type_code,
           unit_number: equipment.unit_number,
           name: equipment.name ?? "",
-          site_name: location.site_name ?? "",
+          site_name: location.site_name ?? location.site_code ?? "",
           site_code: location.site_code ?? "",
           room_area: location.room_area ?? "",
           status,

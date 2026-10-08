@@ -130,18 +130,18 @@ export default function EquipmentForm({
         required
         select
         label="Site name"
-        value={values.site_name}
+        value={values.site_code}
         onChange={(event) => {
           const site = locations.find(
-            (item) => item.site_name === event.target.value,
+            (item) => item.site_code === event.target.value,
           );
-          update("site_name", event.target.value);
-          update("site_code", site?.site_code ?? "");
+          update("site_name", site?.site_name ?? event.target.value);
+          update("site_code", event.target.value);
         }}
       >
         {locations.map((site) => (
-          <MenuItem key={site.site_name} value={site.site_name}>
-            {site.site_name}
+          <MenuItem key={site.site_code} value={site.site_code}>
+            {site.site_name ?? site.site_code}
           </MenuItem>
         ))}
       </TextField>
