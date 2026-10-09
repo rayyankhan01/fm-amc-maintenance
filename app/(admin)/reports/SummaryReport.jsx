@@ -29,7 +29,7 @@ function MetricCard({ label, value }) {
   return <Card variant="outlined"><CardContent><Typography color="text.secondary" variant="body2">{label}</Typography><Typography variant="h4">{value}</Typography></CardContent></Card>;
 }
 
-export default function SummaryReport({ submissions, onLocationChange }) {
+export default function SummaryReport({ submissions, onLocationChange, onPeriodChange }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [location, setLocation] = useState('all');
@@ -69,6 +69,15 @@ export default function SummaryReport({ submissions, onLocationChange }) {
   function resetPage() {
     setPage(0);
   }
+  function updatePeriod(nextFromDate, nextToDate) {
+    onPeriodChange?.(nextFromDate && nextToDate
+      ? `${nextFromDate} to ${nextToDate}`
+      : nextFromDate
+        ? `From ${nextFromDate}`
+        : nextToDate
+          ? `Until ${nextToDate}`
+          : 'All inspection dates');
+  }
   function handleSort(column) {
     if (sortBy === column) {
       setSortDirection((current) => current === 'asc' ? 'desc' : 'asc');
@@ -85,8 +94,8 @@ export default function SummaryReport({ submissions, onLocationChange }) {
   }
   return <Stack spacing={2}>
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-      <TextField type="date" label="From date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); resetPage(); }} slotProps={{ inputLabel: { shrink: true } }} />
-      <TextField type="date" label="To date" value={toDate} onChange={(event) => { setToDate(event.target.value); resetPage(); }} slotProps={{ inputLabel: { shrink: true } }} />
+      <TextField type="date" label="From date" value={fromDate} onChange={(event) => { const nextFromDate = event.target.value; setFromDate(nextFromDate); updatePeriod(nextFromDate, toDate); resetPage(); }} slotProps={{ inputLabel: { shrink: true } }} />
+      <TextField type="date" label="To date" value={toDate} onChange={(event) => { const nextToDate = event.target.value; setToDate(nextToDate); updatePeriod(fromDate, nextToDate); resetPage(); }} slotProps={{ inputLabel: { shrink: true } }} />
       <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); onLocationChange?.(event.target.value); resetPage(); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
       <TextField select label="Asset type" value={type} onChange={(event) => { setType(event.target.value); resetPage(); }} sx={{ minWidth: 180 }}><MenuItem value="all">All asset types</MenuItem>{assetTypes.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
       <TextField select label="Summary metric" value={metric} onChange={(event) => { setMetric(event.target.value); resetPage(); }} sx={{ minWidth: 220 }}>
