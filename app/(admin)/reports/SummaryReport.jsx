@@ -25,11 +25,20 @@ function requiresMaintenance(item) {
   return (item.form_responses ?? []).some((response) => response.result === 'N_OK');
 }
 
-function MetricCard({ label, value }) {
-  return <Card variant="outlined"><CardContent><Typography color="text.secondary" variant="body2">{label}</Typography><Typography variant="h4">{value}</Typography></CardContent></Card>;
+function MetricCard({ label, value, color }) {
+  return <Card variant="outlined" sx={{ borderTop: 4, borderTopColor: `${color}.main` }}><CardContent><Typography color="text.secondary" variant="body2">{label}</Typography><Typography color={`${color}.dark`} variant="h4">{value}</Typography></CardContent></Card>;
 }
 
-export default function SummaryReport({ submissions }) {
+function metricLabel(value) {
+  return {
+    all: 'All completed inspections',
+    by_asset: 'Completed Inspections by Asset',
+    requiring: 'Inspections Requiring Maintenance',
+    without: 'Inspections Not Requiring Maintenance',
+  }[value] ?? value;
+}
+
+export default function SummaryReport({ submissions, onLocationChange, onPeriodChange }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [location, setLocation] = useState('all');
@@ -69,6 +78,15 @@ export default function SummaryReport({ submissions }) {
   function resetPage() {
     setPage(0);
   }
+  function updatePeriod(nextFromDate, nextToDate) {
+    onPeriodChange?.(nextFromDate && nextToDate
+      ? `${nextFromDate} to ${nextToDate}`
+      : nextFromDate
+        ? `From ${nextFromDate}`
+        : nextToDate
+          ? `Until ${nextToDate}`
+          : 'All inspection dates');
+  }
   function handleSort(column) {
     if (sortBy === column) {
       setSortDirection((current) => current === 'asc' ? 'desc' : 'asc');
@@ -85,9 +103,9 @@ export default function SummaryReport({ submissions }) {
   }
   return <Stack spacing={2}>
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-      <TextField type="date" label="From date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); resetPage(); }} slotProps={{ inputLabel: { shrink: true } }} />
-      <TextField type="date" label="To date" value={toDate} onChange={(event) => { setToDate(event.target.value); resetPage(); }} slotProps={{ inputLabel: { shrink: true } }} />
-      <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); resetPage(); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
+      <TextField type="date" label="From date" value={fromDate} onChange={(event) => { const nextFromDate = event.target.value; setFromDate(nextFromDate); updatePeriod(nextFromDate, toDate); resetPage(); }} slotProps={{ inputLabel: { shrink: true } }} />
+      <TextField type="date" label="To date" value={toDate} onChange={(event) => { const nextToDate = event.target.value; setToDate(nextToDate); updatePeriod(fromDate, nextToDate); resetPage(); }} slotProps={{ inputLabel: { shrink: true } }} />
+      <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); onLocationChange?.(event.target.value); resetPage(); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
       <TextField select label="Asset type" value={type} onChange={(event) => { setType(event.target.value); resetPage(); }} sx={{ minWidth: 180 }}><MenuItem value="all">All asset types</MenuItem>{assetTypes.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
       <TextField select label="Summary metric" value={metric} onChange={(event) => { setMetric(event.target.value); resetPage(); }} sx={{ minWidth: 220 }}>
         <MenuItem value="all">All completed inspections</MenuItem>
@@ -100,11 +118,15 @@ export default function SummaryReport({ submissions }) {
       <Button variant="outlined" onClick={exportPdf}>Export PDF</Button>
     </Stack>
     <Grid container spacing={2}>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Inspections completed" value={filteredRows.length} /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={assetCounts.length} /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={filteredRows.length - maintenanceRows.length} /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Inspections completed" value={filteredRows.length} color="primary" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={assetCounts.length} color="info" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} color="warning" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={filteredRows.length - maintenanceRows.length} color="success" /></Grid>
     </Grid>
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 3 }}>
+      <Typography variant="body2"><strong>Asset type:</strong> {type === 'all' ? 'All asset types' : type}</Typography>
+      <Typography variant="body2"><strong>Summary metric:</strong> {metricLabel(metric)}</Typography>
+    </Stack>
     <Paper className="report-table-paper" variant="outlined" sx={{ overflowX: 'auto' }}>
       <Table className="report-table"><TableHead><TableRow>
         {[['asset', 'Asset'], ['type', 'Asset type'], ['location', 'Location'], ['count', 'Completed inspections']].map(([column, label]) => <TableCell key={column} sortDirection={sortBy === column ? sortDirection : false}>
