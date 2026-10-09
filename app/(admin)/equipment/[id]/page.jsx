@@ -73,7 +73,7 @@ export default async function EditEquipmentPage({ params }) {
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Typography variant="h5" sx={{ mb: 3 }}>
-        Edit Equipment
+        Edit Asset
       </Typography>
       <EquipmentForm
         action={updateAdminEquipment}
@@ -94,7 +94,7 @@ export default async function EditEquipmentPage({ params }) {
           next_amc_date: equipment.next_amc_date ?? "",
         }}
         {...lookups}
-        submitLabel="Save equipment"
+        submitLabel="Save asset"
       />
     </Container>
   );

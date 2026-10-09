@@ -26,10 +26,10 @@ export default async function AdminEquipmentPage() {
   if (error) throw error;
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Stack direction="row" sx={{ mb: 3, justifyContent: 'space-between' }}>
-        <Typography variant="h4">Equipment</Typography>
+      <Stack direction="row" sx={{ mb: 3, justifyContent: "space-between" }}>
+        <Typography variant="h4">Assets</Typography>
         <Button href="/equipment/new" variant="contained">
-          Add equipment
+          Add Asset
         </Button>
       </Stack>
       <Paper variant="outlined" sx={{ overflowX: "auto" }}>
@@ -37,9 +37,9 @@ export default async function AdminEquipmentPage() {
           <TableHead>
             <TableRow>
               <TableCell>Asset ID</TableCell>
-              <TableCell>Equipment name</TableCell>
+              <TableCell>Asset name</TableCell>
               <TableCell>Category</TableCell>
-              <TableCell>Equipment type</TableCell>
+              <TableCell>Asset type</TableCell>
               <TableCell>Site name</TableCell>
               <TableCell>Location</TableCell>
               <TableCell>Room/area</TableCell>
@@ -53,7 +53,10 @@ export default async function AdminEquipmentPage() {
               const location = item.locations ?? {};
               return (
                 <TableRow key={item.id}>
-                  <TableCell>{item.asset_id ?? `${location.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`}</TableCell>
+                  <TableCell>
+                    {item.asset_id ??
+                      `${location.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`}
+                  </TableCell>
                   <TableCell>{item.name ?? "-"}</TableCell>
                   <TableCell>{item.equipment_types?.name ?? "-"}</TableCell>
                   <TableCell>
@@ -73,8 +76,8 @@ export default async function AdminEquipmentPage() {
                       style={{ display: "inline" }}
                     >
                       <DeleteConfirmationButton
-                        title="Delete equipment?"
-                        message="This will permanently delete the equipment record. Existing inspection history may prevent deletion."
+                        title="Delete asset?"
+                        message="This will permanently delete the asset record. Existing inspection history may prevent deletion."
                       />
                     </form>
                   </TableCell>

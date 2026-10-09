@@ -11,22 +11,22 @@ import {
   TableHead,
   TableRow,
   Typography,
-} from '@mui/material';
+} from "@mui/material";
 
 function responseText(field, response) {
-  if (!response) return '-';
-  if (field.field_type === 'checklist_item') {
-    const resultLabels = { OK: 'OK', N_OK: 'Not OK', N_A: 'N/A' };
-    return resultLabels[response.result] ?? response.result ?? '-';
+  if (!response) return "-";
+  if (field.field_type === "checklist_item") {
+    const resultLabels = { OK: "OK", N_OK: "Not OK", N_A: "N/A" };
+    return resultLabels[response.result] ?? response.result ?? "-";
   }
-  return response.value || '-';
+  return response.value || "-";
 }
 
 function resultColor(result) {
-  if (result === 'OK') return 'success';
-  if (result === 'N_OK') return 'error';
-  if (result === 'N_A') return 'default';
-  return 'default';
+  if (result === "OK") return "success";
+  if (result === "N_OK") return "error";
+  if (result === "N_A") return "default";
+  return "default";
 }
 
 /**
@@ -35,15 +35,22 @@ function resultColor(result) {
  */
 export default function SubmissionViewer({ submission }) {
   const responseByField = new Map(
-    (submission.form_responses ?? []).map((response) => [response.field_id, response])
+    (submission.form_responses ?? []).map((response) => [
+      response.field_id,
+      response,
+    ]),
   );
   const fields = submission.form_templates?.form_fields ?? [];
-  const headerFields = fields.filter((field) => field.field_type !== 'checklist_item');
-  const checklistFields = fields.filter((field) => field.field_type === 'checklist_item');
+  const headerFields = fields.filter(
+    (field) => field.field_type !== "checklist_item",
+  );
+  const checklistFields = fields.filter(
+    (field) => field.field_type === "checklist_item",
+  );
   const sections = [];
 
   for (const field of checklistFields) {
-    const section = field.section?.trim() || 'Inspection checklist';
+    const section = field.section?.trim() || "Inspection checklist";
     const previous = sections[sections.length - 1];
     if (previous?.name === section) previous.fields.push(field);
     else sections.push({ name: section, fields: [field] });
@@ -51,38 +58,62 @@ export default function SubmissionViewer({ submission }) {
 
   const equipment = submission.equipment ?? {};
   const location = equipment.locations ?? {};
-  const technician = submission.profiles?.name ?? '-';
+  const technician = submission.profiles?.name ?? "-";
   const assetId = equipment.id
-    ? equipment.asset_id ?? `${location.site_code ?? '?'}/${equipment.equipment_type_code ?? '?'}/${equipment.unit_number ?? '?'}`
-    : '-';
+    ? (equipment.asset_id ??
+      `${location.site_code ?? "?"}/${equipment.equipment_type_code ?? "?"}/${equipment.unit_number ?? "?"}`)
+    : "-";
 
   return (
     <Stack spacing={3}>
       <Box>
-        <Typography variant="h4">{submission.form_templates?.name ?? 'Inspection report'}</Typography>
+        <Typography variant="h4">
+          {submission.form_templates?.name ?? "Inspection report"}
+        </Typography>
         <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Submitted {submission.submitted_at ? new Date(submission.submitted_at).toLocaleString() : '-'}
+          Submitted{" "}
+          {submission.submitted_at
+            ? new Date(submission.submitted_at).toLocaleString()
+            : "-"}
         </Typography>
       </Box>
 
       <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Inspection details</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Inspection details
+        </Typography>
         <Stack spacing={1}>
-          <Typography><strong>Asset ID:</strong> {assetId}</Typography>
-          <Typography><strong>Equipment:</strong> {equipment.name || equipment.equipment_type || '-'}</Typography>
-          <Typography><strong>Location:</strong> {location.site_name || location.site_code || '-'}{location.room_area ? `, ${location.room_area}` : ''}</Typography>
-          <Typography><strong>Inspection date:</strong> {submission.inspection_date}</Typography>
-          <Typography><strong>Technician:</strong> {technician}</Typography>
+          <Typography>
+            <strong>Asset ID:</strong> {assetId}
+          </Typography>
+          <Typography>
+            <strong>Asset:</strong>{" "}
+            {equipment.name || equipment.equipment_type || "-"}
+          </Typography>
+          <Typography>
+            <strong>Location:</strong>{" "}
+            {location.site_name || location.site_code || "-"}
+            {location.room_area ? `, ${location.room_area}` : ""}
+          </Typography>
+          <Typography>
+            <strong>Inspection date:</strong> {submission.inspection_date}
+          </Typography>
+          <Typography>
+            <strong>Technician:</strong> {technician}
+          </Typography>
         </Stack>
       </Paper>
 
       {headerFields.length > 0 && (
         <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Inspection information</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Inspection information
+          </Typography>
           <Stack spacing={1}>
             {headerFields.map((field) => (
               <Typography key={field.id}>
-                <strong>{field.label}:</strong> {responseText(field, responseByField.get(field.id))}
+                <strong>{field.label}:</strong>{" "}
+                {responseText(field, responseByField.get(field.id))}
               </Typography>
             ))}
           </Stack>
@@ -90,8 +121,14 @@ export default function SubmissionViewer({ submission }) {
       )}
 
       {sections.map((section, index) => (
-        <Paper variant="outlined" sx={{ overflow: 'hidden' }} key={`${section.name}-${index}`}>
-          <Typography variant="h6" sx={{ p: 2 }}>{section.name}</Typography>
+        <Paper
+          variant="outlined"
+          sx={{ overflow: "hidden" }}
+          key={`${section.name}-${index}`}
+        >
+          <Typography variant="h6" sx={{ p: 2 }}>
+            {section.name}
+          </Typography>
           <Divider />
           <Table size="small">
             <TableHead>
@@ -108,9 +145,13 @@ export default function SubmissionViewer({ submission }) {
                   <TableRow key={field.id}>
                     <TableCell>{field.label}</TableCell>
                     <TableCell>
-                      <Chip label={responseText(field, response)} color={resultColor(response?.result)} size="small" />
+                      <Chip
+                        label={responseText(field, response)}
+                        color={resultColor(response?.result)}
+                        size="small"
+                      />
                     </TableCell>
-                    <TableCell>{response?.remarks || '-'}</TableCell>
+                    <TableCell>{response?.remarks || "-"}</TableCell>
                   </TableRow>
                 );
               })}
@@ -120,24 +161,83 @@ export default function SubmissionViewer({ submission }) {
       ))}
 
       <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Signatures</Typography>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} sx={{ justifyContent: 'space-between' }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Signatures
+        </Typography>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={4}
+          sx={{ justifyContent: "space-between" }}
+        >
           {submission.technician_signature ? (
             <Box sx={{ flex: 1 }}>
-            <Typography variant="body2" color="text.secondary">Technician</Typography>
-            <Box component="img" src={submission.technician_signature} alt="Technician signature" sx={{ display: 'block', maxWidth: '100%', height: 100, objectFit: 'contain', objectPosition: 'left' }} />
+              <Typography variant="body2" color="text.secondary">
+                Technician
+              </Typography>
+              <Box
+                component="img"
+                src={submission.technician_signature}
+                alt="Technician signature"
+                sx={{
+                  display: "block",
+                  maxWidth: "100%",
+                  height: 100,
+                  objectFit: "contain",
+                  objectPosition: "left",
+                }}
+              />
             </Box>
-          ) : <Alert severity="info" sx={{ flex: 1 }}>No technician signature recorded.</Alert>}
+          ) : (
+            <Alert severity="info" sx={{ flex: 1 }}>
+              No technician signature recorded.
+            </Alert>
+          )}
           {submission.supervisor_signature && (
             <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" color="text.secondary">Supervisor</Typography>
-              <Box component="img" src={submission.supervisor_signature} alt="Supervisor signature" sx={{ display: 'block', maxWidth: '100%', height: 100, objectFit: 'contain', objectPosition: 'left' }} />
+              <Typography variant="body2" color="text.secondary">
+                Supervisor
+              </Typography>
+              <Box
+                component="img"
+                src={submission.supervisor_signature}
+                alt="Supervisor signature"
+                sx={{
+                  display: "block",
+                  maxWidth: "100%",
+                  height: 100,
+                  objectFit: "contain",
+                  objectPosition: "left",
+                }}
+              />
             </Box>
           )}
-          <Box className="manager-signature-slot" sx={{ flex: 1, minWidth: 220, minHeight: 130, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center' }}>
-            <Box sx={{ borderBottom: '1px solid', borderColor: 'text.primary', height: 80, width: '100%' }} />
-            <Typography variant="body2" sx={{ mt: 1 }}>Manager&apos;s wet signature</Typography>
-            <Typography variant="caption" color="text.secondary">Signature / date</Typography>
+          <Box
+            className="manager-signature-slot"
+            sx={{
+              flex: 1,
+              minWidth: 220,
+              minHeight: 130,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              textAlign: "center",
+            }}
+          >
+            <Box
+              sx={{
+                borderBottom: "1px solid",
+                borderColor: "text.primary",
+                height: 80,
+                width: "100%",
+              }}
+            />
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Manager&apos;s wet signature
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Signature / date
+            </Typography>
           </Box>
         </Stack>
       </Paper>

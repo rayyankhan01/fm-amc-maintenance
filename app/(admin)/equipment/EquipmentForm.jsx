@@ -25,19 +25,26 @@ export default function EquipmentForm({
     setValues((current) => ({ ...current, [name]: value }));
   }
 
-  const assetId = [values.site_code, values.equipment_type_code, values.unit_number]
+  const assetId = [
+    values.site_code,
+    values.equipment_type_code,
+    values.unit_number,
+  ]
     .map((value) => String(value ?? "").trim())
     .every(Boolean)
     ? `${String(values.site_code).trim()}/${String(values.equipment_type_code).trim().toUpperCase()}/${values.unit_number}`
     : "";
-  const selectedFrequency = frequencies.find((item) => item.code === values.amc_frequency);
-  const nextAmcDate = values.amc_date && selectedFrequency?.interval_days
-    ? (() => {
-        const date = new Date(`${values.amc_date}T00:00:00Z`);
-        date.setUTCDate(date.getUTCDate() + selectedFrequency.interval_days);
-        return date.toISOString().slice(0, 10);
-      })()
-    : values.next_amc_date || "";
+  const selectedFrequency = frequencies.find(
+    (item) => item.code === values.amc_frequency,
+  );
+  const nextAmcDate =
+    values.amc_date && selectedFrequency?.interval_days
+      ? (() => {
+          const date = new Date(`${values.amc_date}T00:00:00Z`);
+          date.setUTCDate(date.getUTCDate() + selectedFrequency.interval_days);
+          return date.toISOString().slice(0, 10);
+        })()
+      : values.next_amc_date || "";
 
   async function handleTypeCodeBlur() {
     if (values.id) return; // don't recalculate when editing existing equipment
@@ -65,8 +72,8 @@ export default function EquipmentForm({
     } catch (submitError) {
       setError(
         submitError.code === "23505"
-          ? "An equipment record with this type code and unit number already exists."
-          : (submitError.message ?? "Unable to save equipment."),
+          ? "An asset record with this type code and unit number already exists."
+          : (submitError.message ?? "Unable to save asset."),
       );
       setSaving(false);
     }
@@ -78,12 +85,12 @@ export default function EquipmentForm({
         label="Asset ID"
         value={assetId || values.asset_id || ""}
         slotProps={{ input: { readOnly: true } }}
-        helperText="Generated from the site code, equipment type code, and unit number."
+        helperText="Generated from the site code, asset type code, and unit number."
       />
       <TextField
         select
         required
-        label="Equipment category"
+        label="Asset Category"
         value={values.equipment_type_id}
         onChange={(event) => {
           const type = equipmentTypes.find(
@@ -101,14 +108,14 @@ export default function EquipmentForm({
       </TextField>
       <TextField
         required
-        label="Equipment type"
+        label="Asset Type"
         value={values.equipment_type}
         onChange={(event) => update("equipment_type", event.target.value)}
         helperText="The type code used by the inspection template."
       />
       <TextField
         required
-        label="Equipment type code"
+        label="Asset Type Code"
         value={values.equipment_type_code}
         onChange={(event) => update("equipment_type_code", event.target.value)}
         onBlur={handleTypeCodeBlur}
@@ -116,20 +123,20 @@ export default function EquipmentForm({
       <TextField
         required
         type="number"
-        label="Unit number"
+        label="Unit Number"
         value={checkingUnitNumber ? "Calculating..." : values.unit_number}
         onChange={(event) => update("unit_number", event.target.value)}
       />
       <TextField
         required
-        label="Equipment name"
+        label="Asset Name"
         value={values.name}
         onChange={(event) => update("name", event.target.value)}
       />
       <TextField
         required
         select
-        label="Site name"
+        label="Site Name"
         value={values.site_code}
         onChange={(event) => {
           const site = locations.find(
@@ -147,20 +154,20 @@ export default function EquipmentForm({
       </TextField>
       <TextField
         required
-        label="Location / site code"
+        label="Location / Site Code"
         value={values.site_code}
         onChange={(event) => update("site_code", event.target.value)}
       />
       <TextField
         required
-        label="Room/area"
+        label="Room/Area"
         value={values.room_area}
         onChange={(event) => update("room_area", event.target.value)}
       />
       <TextField
         select
         required
-        label="Equipment status"
+        label="Asset Status"
         value={values.status}
         onChange={(event) => update("status", event.target.value)}
       >

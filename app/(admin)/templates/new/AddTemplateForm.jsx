@@ -26,7 +26,7 @@ export default function AddTemplateForm({ equipmentTypes }) {
       return;
     }
     if (!selectedType) {
-      setError("Select an Equipment Type!");
+      setError("Select an Asset Type!");
       return;
     }
 
@@ -43,7 +43,7 @@ export default function AddTemplateForm({ equipmentTypes }) {
     } catch (submitError) {
       setError(
         submitError.code === "23505"
-          ? "A template already exists for this equipment type."
+          ? "A template already exists for this asset type."
           : (submitError.message ?? "Failed to create template"),
       );
       setSubmitting(false);
@@ -61,7 +61,7 @@ export default function AddTemplateForm({ equipmentTypes }) {
         />
 
         <TextField
-          label="Equipment Type"
+          label="Asset Type"
           required
           select
           value={equipmentTypeId}

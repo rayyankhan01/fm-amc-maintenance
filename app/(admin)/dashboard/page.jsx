@@ -1,6 +1,6 @@
 import { Container, Grid, Paper, Stack, Typography } from "@mui/material";
-import { createClient } from '@/lib/supabase/server';
-import { getInspectionAlerts } from '@/features/alerts/api';
+import { createClient } from "@/lib/supabase/server";
+import { getInspectionAlerts } from "@/features/alerts/api";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 const sections = [
   {
@@ -10,8 +10,8 @@ const sections = [
   },
   {
     href: "/equipment",
-    title: "Equipment",
-    description: "Manage assets and equipment categories.",
+    title: "Assets",
+    description: "Manage assets and asset categories.",
   },
   {
     href: "/locations",
@@ -20,8 +20,8 @@ const sections = [
   },
   {
     href: "/equipment-types",
-    title: "Equipment types",
-    description: "Manage equipment categories and codes.",
+    title: "Asset types",
+    description: "Manage asset categories and codes.",
   },
   {
     href: "/templates",
@@ -46,9 +46,9 @@ export default async function AdminDashboardPage() {
   const dashboardSections = [
     ...sections,
     {
-      href: '/alerts',
-      title: 'Alerts and notifications',
-      description: `${due.length} due, ${overdue.length} overdue, and ${newAssets.length} new asset${newAssets.length === 1 ? '' : 's'}.`,
+      href: "/alerts",
+      title: "Alerts and notifications",
+      description: `${due.length} due, ${overdue.length} overdue, and ${newAssets.length} new asset${newAssets.length === 1 ? "" : "s"}.`,
     },
   ];
 

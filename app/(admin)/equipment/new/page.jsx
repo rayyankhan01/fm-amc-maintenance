@@ -46,7 +46,7 @@ export default async function NewEquipmentPage() {
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Typography variant="h5" sx={{ mb: 3 }}>
-        Add Equipment
+        Add Asset
       </Typography>
       <EquipmentForm
         action={createAdminEquipment}
@@ -65,7 +65,7 @@ export default async function NewEquipmentPage() {
           next_amc_date: "",
         }}
         {...lookups}
-        submitLabel="Add equipment"
+        submitLabel="Add Asset"
       />
     </Container>
   );

@@ -1,13 +1,41 @@
-import { Container, Grid, Paper, Stack, Typography } from '@mui/material';
+import { Container, Grid, Paper, Stack, Typography } from "@mui/material";
 
 const sections = [
-  { href: '/users', title: 'Users', description: 'Manage staff accounts, roles, and access.' },
-  { href: '/equipment', title: 'Equipment', description: 'Manage assets and equipment categories.' },
-  { href: '/locations', title: 'Locations', description: 'Manage sites, rooms, and areas.' },
-  { href: '/equipment-types', title: 'Equipment types', description: 'Manage equipment categories and codes.' },
-  { href: '/templates', title: 'Inspection templates', description: 'Configure fields used by inspections.' },
-  { href: '/configuration', title: 'Configuration', description: 'Manage statuses, frequencies, and settings.' },
-  { href: '/reports', title: 'Reports', description: 'Review and export inspection data.' },
+  {
+    href: "/users",
+    title: "Users",
+    description: "Manage staff accounts, roles, and access.",
+  },
+  {
+    href: "/equipment",
+    title: "Assets",
+    description: "Manage assets and asset categories.",
+  },
+  {
+    href: "/locations",
+    title: "Locations",
+    description: "Manage sites, rooms, and areas.",
+  },
+  {
+    href: "/equipment-types",
+    title: "Asset types",
+    description: "Manage asset categories and codes.",
+  },
+  {
+    href: "/templates",
+    title: "Inspection templates",
+    description: "Configure fields used by inspections.",
+  },
+  {
+    href: "/configuration",
+    title: "Configuration",
+    description: "Manage statuses, frequencies, and settings.",
+  },
+  {
+    href: "/reports",
+    title: "Reports",
+    description: "Review and export inspection data.",
+  },
 ];
 
 export default function AdminDashboardPage() {
@@ -22,9 +50,25 @@ export default function AdminDashboardPage() {
       <Grid container spacing={2}>
         {sections.map((section) => (
           <Grid key={section.href} size={{ xs: 12, sm: 6, md: 4 }}>
-            <Paper component="a" href={section.href} variant="outlined" sx={{ display: 'block', p: 3, height: '100%', textDecoration: 'none', color: 'inherit', '&:hover': { borderColor: 'primary.main' } }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>{section.title}</Typography>
-              <Typography color="text.secondary">{section.description}</Typography>
+            <Paper
+              component="a"
+              href={section.href}
+              variant="outlined"
+              sx={{
+                display: "block",
+                p: 3,
+                height: "100%",
+                textDecoration: "none",
+                color: "inherit",
+                "&:hover": { borderColor: "primary.main" },
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                {section.title}
+              </Typography>
+              <Typography color="text.secondary">
+                {section.description}
+              </Typography>
             </Paper>
           </Grid>
         ))}
