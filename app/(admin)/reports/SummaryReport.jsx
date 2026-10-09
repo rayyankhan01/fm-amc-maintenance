@@ -29,6 +29,15 @@ function MetricCard({ label, value }) {
   return <Card variant="outlined"><CardContent><Typography color="text.secondary" variant="body2">{label}</Typography><Typography variant="h4">{value}</Typography></CardContent></Card>;
 }
 
+function metricLabel(value) {
+  return {
+    all: 'All completed inspections',
+    by_asset: 'Completed Inspections by Asset',
+    requiring: 'Inspections Requiring Maintenance',
+    without: 'Inspections Not Requiring Maintenance',
+  }[value] ?? value;
+}
+
 export default function SummaryReport({ submissions, onLocationChange, onPeriodChange }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -114,6 +123,10 @@ export default function SummaryReport({ submissions, onLocationChange, onPeriodC
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={filteredRows.length - maintenanceRows.length} /></Grid>
     </Grid>
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 3 }}>
+      <Typography variant="body2"><strong>Asset type:</strong> {type === 'all' ? 'All asset types' : type}</Typography>
+      <Typography variant="body2"><strong>Summary metric:</strong> {metricLabel(metric)}</Typography>
+    </Stack>
     <Paper className="report-table-paper" variant="outlined" sx={{ overflowX: 'auto' }}>
       <Table className="report-table"><TableHead><TableRow>
         {[['asset', 'Asset'], ['type', 'Asset type'], ['location', 'Location'], ['count', 'Completed inspections']].map(([column, label]) => <TableCell key={column} sortDirection={sortBy === column ? sortDirection : false}>
