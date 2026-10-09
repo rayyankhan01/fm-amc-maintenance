@@ -25,8 +25,8 @@ function requiresMaintenance(item) {
   return (item.form_responses ?? []).some((response) => response.result === 'N_OK');
 }
 
-function MetricCard({ label, value }) {
-  return <Card variant="outlined"><CardContent><Typography color="text.secondary" variant="body2">{label}</Typography><Typography variant="h4">{value}</Typography></CardContent></Card>;
+function MetricCard({ label, value, color }) {
+  return <Card variant="outlined" sx={{ borderTop: 4, borderTopColor: `${color}.main` }}><CardContent><Typography color="text.secondary" variant="body2">{label}</Typography><Typography color={`${color}.dark`} variant="h4">{value}</Typography></CardContent></Card>;
 }
 
 function metricLabel(value) {
@@ -118,10 +118,10 @@ export default function SummaryReport({ submissions, onLocationChange, onPeriodC
       <Button variant="outlined" onClick={exportPdf}>Export PDF</Button>
     </Stack>
     <Grid container spacing={2}>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Inspections completed" value={filteredRows.length} /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={assetCounts.length} /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={filteredRows.length - maintenanceRows.length} /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Inspections completed" value={filteredRows.length} color="primary" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={assetCounts.length} color="info" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} color="warning" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={filteredRows.length - maintenanceRows.length} color="success" /></Grid>
     </Grid>
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 3 }}>
       <Typography variant="body2"><strong>Asset type:</strong> {type === 'all' ? 'All asset types' : type}</Typography>
