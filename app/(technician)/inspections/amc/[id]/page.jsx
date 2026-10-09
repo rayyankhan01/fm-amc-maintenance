@@ -24,7 +24,23 @@ export default async function InspectionFormPage({ params }) {
     .limit(1)
     .maybeSingle();
 
-  if (latestSubmission) {
+  const { data: equipment, error: equipmentError } = await supabase
+    .from("equipment")
+    .select(
+      "id, equipment_type_code, equipment_type, unit_number, name, next_amc_date, locations ( site_code, room_area )",
+    )
+    .eq("id", id)
+    .single();
+
+  if (equipmentError || !equipment) notFound();
+
+  // checks if the latest submission is still valid based on the next_amc_date of the equipment
+  const today = new Date().toISOString().slice(0, 10);
+  const isStillSubmitted = equipment.next_amc_date
+    ? equipment.next_amc_date > today
+    : Boolean(latestSubmission);
+
+  if (latestSubmission && isStillSubmitted) {
     const submission = await getSubmissionWithResponses(
       supabase,
       latestSubmission.id,
@@ -41,15 +57,6 @@ export default async function InspectionFormPage({ params }) {
       </Container>
     );
   }
-  const { data: equipment, error: equipmentError } = await supabase
-    .from("equipment")
-    .select(
-      "id, equipment_type_code, equipment_type, unit_number, name, locations ( site_code, room_area )",
-    )
-    .eq("id", id)
-    .single();
-
-  if (equipmentError || !equipment) notFound();
 
   const template = await getTemplateForEquipmentType(
     supabase,

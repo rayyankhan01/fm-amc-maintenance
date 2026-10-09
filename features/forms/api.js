@@ -109,6 +109,29 @@ export async function submitInspection(supabase, input) {
     if (issuesError) throw issuesError;
   }
 
+  const { data: equipment } = await supabase
+    .from("equipment")
+    .select("amc_frequency")
+    .eq("id", equipment_id)
+    .single();
+  if (equipment?.amc_frequency) {
+    const { data: frequency } = await supabase
+      .from("maintenance_frequencies")
+      .select("interval_days")
+      .eq("label", equipment.amc_frequency)
+      .maybeSingle();
+
+    if (frequency?.interval_days) {
+      const nextDate = new Date(`${inspection_date}T00:00:00Z`);
+      nextDate.setUTCDate(nextDate.getUTCDate() + frequency.interval_days);
+      const { error: nextDateError } = await supabase
+        .from("equipment")
+        .update({ next_amc_date: nextDate.toISOString().slice(0, 10) })
+        .eq("id", equipment_id);
+      if (nextDateError) throw nextDateError;
+    }
+  }
+
   return submission.id;
 }
 
