@@ -1,4 +1,4 @@
-import { Container, Typography, Stack, Button } from "@mui/material";
+import { Container, Typography, Stack, Button, Divider } from "@mui/material";
 import { createClient } from "@/lib/supabase/server";
 import EquipmentList from "./EquipmentList";
 import LogoutButton from "@/features/auth/components/LogoutButton";
@@ -52,12 +52,26 @@ export default async function InspectionsPage() {
         sx={{
           justifyContent: "space-between",
           alignItems: "flex-start",
-          mb: 4,
+          mb: 1,
         }}
       >
-        <Typography variant="h5" sx={{ mb: 3 }}>
-          Select Equipment
+        <Typography variant="h5" sx={{ mb: 1 }}>
+          AMC Inspection
         </Typography>
+
+        <LogoutButton />
+      </Stack>
+      <Divider sx={{ mb: 3 }} />
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{ justifyContent: "space-between", alignItems: "flex-start" }}
+      >
+        <Link href="/inspections/amc/new" style={{ textDecoration: "none" }}>
+          <Button variant="outlined" sx={{ mb: 3 }}>
+            Asset not listed? Add it here
+          </Button>
+        </Link>
         <Link
           href="/inspections/maintenance"
           style={{ textDecoration: "none" }}
@@ -66,20 +80,8 @@ export default async function InspectionsPage() {
             Maintenance
           </Button>
         </Link>
-        <LogoutButton />
       </Stack>
-      <Stack>
-        <Typography variant="subtitle2" sx={{ mb: 2, color: "red" }}>
-          NOTE : The status is currently visual, so it does not update once the
-          deadline is due
-        </Typography>
-        <Link href="/inspections/amc/new" style={{ textDecoration: "none" }}>
-          <Button variant="outlined" sx={{ mb: 3 }}>
-            Equipment not listed? Add it here
-          </Button>
-        </Link>
-      </Stack>
-
+      <Divider sx={{ mb: 3 }} />
       <EquipmentList
         equipment={equipment}
         equipmentTypes={equipmentTypes}

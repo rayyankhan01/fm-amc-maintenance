@@ -58,7 +58,7 @@ function renderEquipmentList(items) {
                 primary={item.name ?? item.equipment_type}
                 secondary={`${assetId}· ${item.locations?.room_area ? `Room ${item.locations.room_area}` : ""}`}
               />
-              <Chip label={item.status} size="small" />
+              <Chip label="Inspect" size="small" color="primary" />
             </ListItemButton>
           );
         })}
@@ -129,20 +129,10 @@ export default function EquipmentList({
   return (
     <>
       <Box sx={{ mb: 3 }}>
-        <TextField
-          label="Search Asset"
-          fullWidth
-          value={searchText}
-          onChange={(e) => {
-            setSearchText(e.target.value);
-            setSelectedTypeId("");
-          }}
-          sx={{ mb: 2 }}
-        />
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
           <TextField
             select
-            label="Equipment Type"
+            label="Asset Type"
             value={selectedTypeId}
             fullWidth
             onChange={(e) => setSelectedTypeId(e.target.value)}
@@ -169,6 +159,16 @@ export default function EquipmentList({
             ))}
           </TextField>
         </Stack>
+        <TextField
+          label="Search Asset"
+          fullWidth
+          value={searchText}
+          onChange={(e) => {
+            setSearchText(e.target.value);
+            setSelectedTypeId("");
+          }}
+          sx={{ mb: 2 }}
+        />
       </Box>
 
       <Accordion
@@ -176,7 +176,9 @@ export default function EquipmentList({
         onChange={() => setPendingExpanded((prev) => !prev)}
       >
         <AccordionSummary expandIcon={<ExpandMore />}>
-          <Typography>Pending ({pendingEquipment.length})</Typography>
+          <Typography>
+            Inspection Pending ({pendingEquipment.length})
+          </Typography>
         </AccordionSummary>
         <AccordionDetails>
           {renderEquipmentList(pendingEquipment)}
@@ -187,7 +189,9 @@ export default function EquipmentList({
       // onChange={() => setSubmittedExpanded((prev) => !prev)}
       >
         <AccordionSummary expandIcon={<ExpandMore />}>
-          <Typography>Submitted ({submittedEquipment.length})</Typography>
+          <Typography>
+            Inspection Submitted ({submittedEquipment.length})
+          </Typography>
         </AccordionSummary>
         <AccordionDetails>
           {renderEquipmentList(submittedEquipment)}
