@@ -71,6 +71,7 @@ export default function InspectionReports({ reportData }) {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [summaryLocation, setSummaryLocation] = useState('all');
   const selectedRows = tab === 'equipment' ? reportData.equipment : tab === 'completed' ? reportData.completed : tab === 'pending' ? reportData.pending : tab === 'overdue' ? reportData.overdue : reportData.nok;
   const locations = [...new Set([...reportData.equipment, ...reportData.nok].map(locationLabel).filter((value) => value !== '-'))].sort();
   const filteredRows = selectedRows.filter((item) => {
@@ -116,12 +117,14 @@ export default function InspectionReports({ reportData }) {
       title={tab === 'summary' ? 'Inspection Summary Report' : 'Consolidated Inspection Report'}
       description={descriptionByTab[tab]}
       period={period}
-      siteLocation={['equipment', 'nok'].includes(tab) && location !== 'all' ? location : 'All sites / locations'}
+      siteLocation={tab === 'summary'
+        ? summaryLocation === 'all' ? 'All sites / locations' : summaryLocation
+        : ['equipment', 'nok'].includes(tab) && location !== 'all' ? location : 'All sites / locations'}
     />
     <Tabs value={tab} onChange={(_, value) => { setTab(value); setPage(0); }} variant="scrollable">
       <Tab value="summary" label="Summary" /><Tab value="equipment" label="Equipment wise" /><Tab value="completed" label="Completed" /><Tab value="pending" label="Pending" /><Tab value="overdue" label="Overdue" /><Tab value="nok" label="N/OK checklist" />
     </Tabs>
-    {tab === 'summary' && <SummaryReport submissions={reportData.completed} />}
+    {tab === 'summary' && <SummaryReport submissions={reportData.completed} onLocationChange={setSummaryLocation} />}
     {tab !== 'summary' && <>
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
       <TextField label="Search report" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Equipment, date, technician" fullWidth />
