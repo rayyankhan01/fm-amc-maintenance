@@ -218,6 +218,10 @@ export default function InspectionReports({ reportData }) {
       reportData.completed.map((submission) => submission.inspection_date),
     ),
   );
+  const completedDates = reportData.completed
+    .map((submission) => submission.inspection_date)
+    .filter(Boolean)
+    .sort();
   const selectedRows =
     tab === "equipment"
       ? reportData.equipment
@@ -360,6 +364,10 @@ export default function InspectionReports({ reportData }) {
       {tab === "summary" && (
         <SummaryReport
           submissions={reportData.completed}
+          equipment={reportData.equipment}
+          frequencies={reportData.frequencies}
+          reportStartDate={completedDates[0]}
+          reportEndDate={completedDates[completedDates.length - 1]}
           onLocationChange={setSummaryLocation}
           onPeriodChange={setSummaryPeriod}
         />

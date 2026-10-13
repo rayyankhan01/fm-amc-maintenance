@@ -1,5 +1,5 @@
 export async function getInspectionReportData(supabase) {
-  const [{ data: equipment, error: equipmentError }, { data: submissions, error: submissionError }] = await Promise.all([
+  const [{ data: equipment, error: equipmentError }, { data: submissions, error: submissionError }, { data: frequencies, error: frequencyError }] = await Promise.all([
     supabase
       .from('equipment')
       .select('id, asset_id, equipment_type, equipment_type_code, unit_number, name, amc_frequency, amc_date, next_amc_date, locations(site_code, site_name, room_area)')
@@ -8,10 +8,14 @@ export async function getInspectionReportData(supabase) {
       .from('form_submissions')
       .select('id, inspection_date, submitted_at, equipment_id, equipment(asset_id, equipment_type, equipment_type_code, unit_number, equipment_types(name), locations(site_code, site_name, room_area)), profiles(name), form_templates(name), form_responses(result)')
       .order('inspection_date', { ascending: false }),
+    supabase
+      .from('maintenance_frequencies')
+      .select('code, interval_days'),
   ]);
 
   if (equipmentError) throw equipmentError;
   if (submissionError) throw submissionError;
+  if (frequencyError) throw frequencyError;
 
   const historyByEquipment = new Map();
   for (const submission of submissions ?? []) {
@@ -41,6 +45,7 @@ export async function getInspectionReportData(supabase) {
 
   return {
     equipment: equipmentRows,
+    frequencies: frequencies ?? [],
     completed: submissions ?? [],
     pending: equipmentRows.filter((item) => item.scheduleStatus === 'pending'),
     overdue: equipmentRows.filter((item) => item.scheduleStatus === 'overdue'),

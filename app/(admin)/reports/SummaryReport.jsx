@@ -35,12 +35,13 @@ function metricLabel(value) {
     by_asset: 'Completed Inspections by Asset',
     requiring: 'Inspections Requiring Maintenance',
     without: 'Inspections Not Requiring Maintenance',
+    cancelled: 'Cancelled Inspections',
   }[value] ?? value;
 }
 
-export default function SummaryReport({ submissions, onLocationChange, onPeriodChange }) {
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+export default function SummaryReport({ submissions, equipment, frequencies, reportStartDate, reportEndDate, onLocationChange, onPeriodChange }) {
+  const [fromDate, setFromDate] = useState(reportStartDate ?? '');
+  const [toDate, setToDate] = useState(reportEndDate ?? '');
   const [location, setLocation] = useState('all');
   const [type, setType] = useState('all');
   const [metric, setMetric] = useState('all');
@@ -56,24 +57,81 @@ export default function SummaryReport({ submissions, onLocationChange, onPeriodC
       && (location === 'all' || locationLabel(item) === location)
       && (type === 'all' || assetType(item) === type);
   }), [fromDate, location, submissions, toDate, type]);
-  const filteredRows = useMemo(() => baseRows.filter((item) => {
-    if (metric === 'requiring') return requiresMaintenance(item);
-    if (metric === 'without') return !requiresMaintenance(item);
-    return true;
-  }), [baseRows, metric]);
+  const effectiveFromDate = fromDate || reportStartDate;
+  const effectiveToDate = toDate || reportEndDate;
+  const expectedAssets = useMemo(() => (equipment ?? []).filter((item) =>
+    (location === 'all' || locationLabel({ equipment: item }) === location)
+    && (type === 'all' || assetType({ equipment: item }) === type),
+  ), [equipment, location, type]);
+  const frequencyByCode = new Map((frequencies ?? []).map((item) => [item.code.toLowerCase(), item.interval_days]));
+  function expectedCount(asset) {
+    if (!asset?.amc_frequency) return null;
+    if (!effectiveFromDate || !effectiveToDate) return 1;
+    const start = new Date(`${effectiveFromDate}T00:00:00Z`);
+    const end = new Date(`${effectiveToDate}T00:00:00Z`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
+    const frequency = asset.amc_frequency.toLowerCase();
+    if (frequency.includes('week')) {
+      let mondayToSaturdayDays = 0;
+      for (const day = new Date(start); day <= end; day.setUTCDate(day.getUTCDate() + 1)) {
+        if (day.getUTCDay() >= 1 && day.getUTCDay() <= 6) mondayToSaturdayDays += 1;
+      }
+      return Math.floor(mondayToSaturdayDays / 6);
+    }
+    if (frequency.includes('month')) {
+      return (end.getUTCFullYear() - start.getUTCFullYear()) * 12
+        + end.getUTCMonth() - start.getUTCMonth() + 1;
+    }
+    if (frequency.includes('daily')) {
+      return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+    }
+    const intervalDays = frequencyByCode.get(frequency);
+    if (!intervalDays) return 1;
+    const periodDays = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+    return Math.max(1, Math.ceil(periodDays / intervalDays));
+  }
+  const submittedCountByAsset = new Map();
+  for (const row of baseRows) {
+    const id = row.equipment_id ?? row.equipment?.id;
+    submittedCountByAsset.set(id, (submittedCountByAsset.get(id) ?? 0) + 1);
+  }
+  const cancelledRows = expectedAssets
+    .filter((item) => expectedCount(item) > (submittedCountByAsset.get(item.id) ?? 0))
+    .map((item) => ({ equipment: item, equipment_id: item.id }));
+  const filteredRows = useMemo(() => {
+    if (metric === 'cancelled') return cancelledRows;
+    return baseRows.filter((item) => {
+      if (metric === 'requiring') return requiresMaintenance(item);
+      if (metric === 'without') return !requiresMaintenance(item);
+      return true;
+    });
+  }, [baseRows, cancelledRows, metric]);
+  const expectedSubmissionCount = expectedAssets.reduce((total, asset) => total + expectedCount(asset), 0);
+  const cancelledCount = expectedAssets.reduce((total, asset) => total + Math.max(expectedCount(asset) - (submittedCountByAsset.get(asset.id) ?? 0), 0), 0);
   const maintenanceRows = baseRows.filter(requiresMaintenance);
-  const assetCounts = [...new Map(filteredRows.map((item) => [equipmentLabel(item), 0])).keys()]
-    .map((asset) => ({ asset, count: filteredRows.filter((item) => equipmentLabel(item) === asset).length }));
+  const rowsForAssetSummary = metric === 'all' || metric === 'by_asset'
+    ? [...expectedAssets.map((item) => ({ equipment: item, equipment_id: item.id })), ...filteredRows]
+    : filteredRows;
+  const assetCounts = [...new Map(rowsForAssetSummary.map((item) => [equipmentLabel(item), 0])).keys()]
+    .map((asset) => {
+      const count = filteredRows.filter((item) => equipmentLabel(item) === asset).length;
+      const schedule = expectedAssets.find((record) => equipmentLabel({ equipment: record }) === asset)
+        ?? equipment?.find((record) => record.asset_id === asset);
+      const expected = expectedCount(schedule);
+      return { asset, count, cancelled: expected === null ? '' : Math.max(expected - count, 0) };
+    });
   const sortedAssetCounts = useMemo(() => [...assetCounts].sort((left, right) => {
     const leftSource = filteredRows.find((row) => equipmentLabel(row) === left.asset);
     const rightSource = filteredRows.find((row) => equipmentLabel(row) === right.asset);
-    const leftValue = sortBy === 'asset' ? left.asset : sortBy === 'type' ? assetType(leftSource) : sortBy === 'location' ? locationLabel(leftSource) : left.count;
-    const rightValue = sortBy === 'asset' ? right.asset : sortBy === 'type' ? assetType(rightSource) : sortBy === 'location' ? locationLabel(rightSource) : right.count;
+    const leftSchedule = equipment?.find((record) => record.id === leftSource?.equipment_id) ?? leftSource?.equipment;
+    const rightSchedule = equipment?.find((record) => record.id === rightSource?.equipment_id) ?? rightSource?.equipment;
+    const leftValue = sortBy === 'asset' ? left.asset : sortBy === 'type' ? assetType(leftSource) : sortBy === 'location' ? locationLabel(leftSource) : sortBy === 'frequency' ? leftSchedule?.amc_frequency ?? '-' : sortBy === 'nextAmc' ? leftSchedule?.next_amc_date ?? '-' : sortBy === 'cancelled' ? left.cancelled : left.count;
+    const rightValue = sortBy === 'asset' ? right.asset : sortBy === 'type' ? assetType(rightSource) : sortBy === 'location' ? locationLabel(rightSource) : sortBy === 'frequency' ? rightSchedule?.amc_frequency ?? '-' : sortBy === 'nextAmc' ? rightSchedule?.next_amc_date ?? '-' : sortBy === 'cancelled' ? right.cancelled : right.count;
     const comparison = typeof leftValue === 'number'
       ? leftValue - rightValue
       : String(leftValue).localeCompare(String(rightValue));
     return sortDirection === 'asc' ? comparison : -comparison;
-  }), [assetCounts, filteredRows, sortBy, sortDirection]);
+  }), [assetCounts, equipment, filteredRows, sortBy, sortDirection]);
   const visibleAssetCounts = sortedAssetCounts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   function resetPage() {
     setPage(0);
@@ -112,6 +170,7 @@ export default function SummaryReport({ submissions, onLocationChange, onPeriodC
         <MenuItem value="by_asset">Completed Inspections by Asset</MenuItem>
         <MenuItem value="requiring">Inspections Requiring Maintenance</MenuItem>
         <MenuItem value="without">Inspections Not Requiring Maintenance</MenuItem>
+        <MenuItem value="cancelled">Cancelled Inspections</MenuItem>
       </TextField>
     </Stack>
     <Stack className="report-print-control" direction="row" spacing={1} sx={{ alignSelf: 'flex-start' }}>
@@ -122,6 +181,8 @@ export default function SummaryReport({ submissions, onLocationChange, onPeriodC
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={assetCounts.length} color="info" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} color="warning" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={filteredRows.length - maintenanceRows.length} color="success" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed vs actual" value={`${baseRows.length} / ${expectedSubmissionCount}`} color="secondary" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Cancelled inspections" value={cancelledCount} color="error" /></Grid>
     </Grid>
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 3 }}>
       <Typography variant="body2"><strong>Asset type:</strong> {type === 'all' ? 'All asset types' : type}</Typography>
@@ -129,15 +190,17 @@ export default function SummaryReport({ submissions, onLocationChange, onPeriodC
     </Stack>
     <Paper className="report-table-paper" variant="outlined" sx={{ overflowX: 'auto' }}>
       <Table className="report-table"><TableHead><TableRow>
-        {[['asset', 'Asset'], ['type', 'Asset type'], ['location', 'Location'], ['count', 'Completed inspections']].map(([column, label]) => <TableCell key={column} sortDirection={sortBy === column ? sortDirection : false}>
+        {[['asset', 'Asset'], ['type', 'Asset type'], ['location', 'Location'], ['frequency', 'Frequency'], ['nextAmc', 'Next AMC date'], ['count', 'Completed inspections'], ['cancelled', 'Cancelled']].map(([column, label]) => <TableCell key={column} sortDirection={sortBy === column ? sortDirection : false}>
           <TableSortLabel active={sortBy === column} direction={sortBy === column ? sortDirection : 'asc'} onClick={() => handleSort(column)}>{label}</TableSortLabel>
         </TableCell>)}
       </TableRow></TableHead>
         <TableBody>{visibleAssetCounts.map((item) => {
-          const source = filteredRows.find((row) => equipmentLabel(row) === item.asset);
-          return <TableRow key={item.asset}><TableCell>{item.asset}</TableCell><TableCell>{assetType(source)}</TableCell><TableCell>{locationLabel(source)}</TableCell><TableCell>{item.count}</TableCell></TableRow>;
+          const source = filteredRows.find((row) => equipmentLabel(row) === item.asset)
+            ?? { equipment: equipment?.find((record) => record.asset_id === item.asset) };
+          const schedule = equipment?.find((record) => record.id === source?.equipment_id) ?? source?.equipment;
+          return <TableRow key={item.asset}><TableCell>{item.asset}</TableCell><TableCell>{assetType(source)}</TableCell><TableCell>{locationLabel(source)}</TableCell><TableCell>{schedule?.amc_frequency ?? '-'}</TableCell><TableCell>{schedule?.next_amc_date ?? '-'}</TableCell><TableCell>{item.count}</TableCell><TableCell>{item.cancelled}</TableCell></TableRow>;
         })}
-          {assetCounts.length === 0 && <TableRow><TableCell colSpan={4}>No completed inspections match the selected filters.</TableCell></TableRow>}
+          {assetCounts.length === 0 && <TableRow><TableCell colSpan={7}>No completed inspections match the selected filters.</TableCell></TableRow>}
         </TableBody>
       </Table>
       <TablePagination
