@@ -65,7 +65,7 @@ export default function SummaryReport({ submissions, equipment, frequencies, rep
   ), [equipment, location, type]);
   const frequencyByCode = new Map((frequencies ?? []).map((item) => [item.code.toLowerCase(), item.interval_days]));
   function expectedCount(asset) {
-    if (!asset?.amc_frequency) return null;
+    if (!asset?.amc_frequency || asset.amc_frequency.trim() === '-') return null;
     if (!effectiveFromDate || !effectiveToDate) return 1;
     const start = new Date(`${effectiveFromDate}T00:00:00Z`);
     const end = new Date(`${effectiveToDate}T00:00:00Z`);
@@ -118,7 +118,7 @@ export default function SummaryReport({ submissions, equipment, frequencies, rep
       const schedule = expectedAssets.find((record) => equipmentLabel({ equipment: record }) === asset)
         ?? equipment?.find((record) => record.asset_id === asset);
       const expected = expectedCount(schedule);
-      return { asset, count, cancelled: expected === null ? '' : Math.max(expected - count, 0) };
+      return { asset, count, cancelled: expected === null ? '-' : Math.max(expected - count, 0) };
     });
   const sortedAssetCounts = useMemo(() => [...assetCounts].sort((left, right) => {
     const leftSource = filteredRows.find((row) => equipmentLabel(row) === left.asset);
