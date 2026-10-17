@@ -132,6 +132,11 @@ export default function SummaryReport({
       }),
     [fromDate, location, submissions, toDate, type],
   );
+  const completedAssetCount = new Set(
+    baseRows
+      .map((item) => item.equipment_id ?? item.equipment?.id ?? equipmentLabel(item))
+      .filter((value) => value !== "-"),
+  ).size;
   const effectiveFromDate = fromDate || reportStartDate;
   const effectiveToDate = toDate || reportEndDate;
   const expectedAssets = useMemo(
@@ -190,6 +195,7 @@ export default function SummaryReport({
   function cancellationCount(asset) {
     const expected = expectedCount(asset);
     if (expected === null) return null;
+    if (!asset?.next_amc_date || !effectiveToDate || effectiveToDate <= asset.next_amc_date) return 0;
     const submitted = submittedCountByAsset.get(asset.id) ?? 0;
     return submitted > 0 ? 0 : expected;
   }
@@ -359,14 +365,14 @@ export default function SummaryReport({
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <MetricCard
             label="Inspections completed"
-            value={filteredRows.length}
+            value={baseRows.length}
             color="primary"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <MetricCard
             label="Completed by asset"
-            value={assetCounts.length}
+            value={completedAssetCount}
             color="info"
           />
         </Grid>
@@ -380,7 +386,7 @@ export default function SummaryReport({
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <MetricCard
             label="Without maintenance"
-            value={filteredRows.length - maintenanceRows.length}
+            value={baseRows.length - maintenanceRows.length}
             color="success"
           />
         </Grid>
