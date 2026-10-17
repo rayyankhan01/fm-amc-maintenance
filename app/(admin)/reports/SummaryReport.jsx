@@ -151,17 +151,13 @@ export default function SummaryReport({
     ]),
   );
   function expectedCount(asset) {
-    if (!asset?.amc_frequency || asset.amc_frequency.trim() === "-")
-      return null;
-    if (!effectiveFromDate || !effectiveToDate) return 1;
-    const start = new Date(`${effectiveFromDate}T00:00:00Z`);
-    const end = new Date(`${effectiveToDate}T00:00:00Z`);
-    if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime()) ||
-      end < start
-    )
-      return 0;
+    if (!asset?.amc_frequency || asset.amc_frequency.trim() === '-') return null;
+    const scheduleStart = asset.amc_date || effectiveFromDate;
+    const scheduleEnd = asset.next_amc_date || effectiveToDate;
+    if (!scheduleStart || !scheduleEnd) return 1;
+    const start = new Date(`${scheduleStart}T00:00:00Z`);
+    const end = new Date(`${scheduleEnd}T00:00:00Z`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
     const frequency = asset.amc_frequency.toLowerCase();
     if (frequency.includes("week")) {
       let mondayToSaturdayDays = 0;
@@ -193,14 +189,32 @@ export default function SummaryReport({
     return Math.max(1, Math.ceil(periodDays / intervalDays));
   }
   const submittedCountByAsset = new Map();
-  for (const row of baseRows) {
-    const id = row.equipment_id ?? row.equipment?.id;
-    submittedCountByAsset.set(id, (submittedCountByAsset.get(id) ?? 0) + 1);
+  for (const asset of expectedAssets) {
+    const start = asset.amc_date ? new Date(`${asset.amc_date}T00:00:00Z`) : null;
+    const end = asset.next_amc_date ? new Date(`${asset.next_amc_date}T00:00:00Z`) : null;
+    const count = submissions.filter((submission) => {
+      const date = new Date(`${submission.inspection_date}T00:00:00Z`);
+      const id = submission.equipment_id ?? submission.equipment?.id;
+      return id === asset.id
+        && (!start || date >= start)
+        && (!end || date <= end);
+    }).length;
+    submittedCountByAsset.set(asset.id, count);
+  }
+  function cancellationCount(asset) {
+    const expected = expectedCount(asset);
+    if (expected === null) return null;
+    const submitted = submittedCountByAsset.get(asset.id) ?? 0;
+    return submitted > 0 ? 0 : expected;
   }
   const cancelledRows = expectedAssets
+<<<<<<< HEAD
     .filter(
       (item) => expectedCount(item) > (submittedCountByAsset.get(item.id) ?? 0),
     )
+=======
+    .filter((item) => cancellationCount(item) > 0)
+>>>>>>> feature/report-summary-tab-admin
     .map((item) => ({ equipment: item, equipment_id: item.id }));
   const filteredRows = useMemo(() => {
     if (metric === "cancelled") return cancelledRows;
@@ -210,6 +224,7 @@ export default function SummaryReport({
       return true;
     });
   }, [baseRows, cancelledRows, metric]);
+<<<<<<< HEAD
   const expectedSubmissionCount = expectedAssets.reduce(
     (total, asset) => total + expectedCount(asset),
     0,
@@ -309,6 +324,35 @@ export default function SummaryReport({
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage,
   );
+=======
+  const expectedSubmissionCount = expectedAssets.reduce((total, asset) => total + expectedCount(asset), 0);
+  const cancelledCount = expectedAssets.reduce((total, asset) => total + (cancellationCount(asset) ?? 0), 0);
+  const maintenanceRows = baseRows.filter(requiresMaintenance);
+  const rowsForAssetSummary = metric === 'all' || metric === 'by_asset'
+    ? [...expectedAssets.map((item) => ({ equipment: item, equipment_id: item.id })), ...filteredRows]
+    : filteredRows;
+  const assetCounts = [...new Map(rowsForAssetSummary.map((item) => [equipmentLabel(item), 0])).keys()]
+    .map((asset) => {
+      const count = filteredRows.filter((item) => equipmentLabel(item) === asset).length;
+      const schedule = expectedAssets.find((record) => equipmentLabel({ equipment: record }) === asset)
+        ?? equipment?.find((record) => record.asset_id === asset);
+      const expected = expectedCount(schedule);
+      return { asset, count, cancelled: expected === null ? '-' : cancellationCount(schedule) };
+    });
+  const sortedAssetCounts = useMemo(() => [...assetCounts].sort((left, right) => {
+    const leftSource = filteredRows.find((row) => equipmentLabel(row) === left.asset);
+    const rightSource = filteredRows.find((row) => equipmentLabel(row) === right.asset);
+    const leftSchedule = equipment?.find((record) => record.id === leftSource?.equipment_id) ?? leftSource?.equipment;
+    const rightSchedule = equipment?.find((record) => record.id === rightSource?.equipment_id) ?? rightSource?.equipment;
+    const leftValue = sortBy === 'asset' ? left.asset : sortBy === 'type' ? assetType(leftSource) : sortBy === 'location' ? locationLabel(leftSource) : sortBy === 'frequency' ? leftSchedule?.amc_frequency ?? '-' : sortBy === 'nextAmc' ? leftSchedule?.next_amc_date ?? '-' : sortBy === 'cancelled' ? left.cancelled : left.count;
+    const rightValue = sortBy === 'asset' ? right.asset : sortBy === 'type' ? assetType(rightSource) : sortBy === 'location' ? locationLabel(rightSource) : sortBy === 'frequency' ? rightSchedule?.amc_frequency ?? '-' : sortBy === 'nextAmc' ? rightSchedule?.next_amc_date ?? '-' : sortBy === 'cancelled' ? right.cancelled : right.count;
+    const comparison = typeof leftValue === 'number'
+      ? leftValue - rightValue
+      : String(leftValue).localeCompare(String(rightValue));
+    return sortDirection === 'asc' ? comparison : -comparison;
+  }), [assetCounts, equipment, filteredRows, sortBy, sortDirection]);
+  const visibleAssetCounts = sortedAssetCounts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+>>>>>>> feature/report-summary-tab-admin
   function resetPage() {
     setPage(0);
   }
