@@ -11,8 +11,9 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { deleteLocation } from "@/features/admin/commands";
-import DeleteConfirmationButton from "../DeleteConfirmationButton";
+// import { deleteLocation } from "@/features/admin/commands";
+// import DeleteConfirmationButton from "../DeleteConfirmationButton";
+import LocationsList from "./LocationsList";
 
 export default async function LocationsPage() {
   const supabase = await createClient();
@@ -30,7 +31,8 @@ export default async function LocationsPage() {
           Add location
         </Button>
       </Stack>
-      <Paper variant="outlined">
+      <LocationsList locations={locations} />
+      {/* <Paper variant="outlined">
         <Table>
           <TableHead>
             <TableRow>
@@ -62,7 +64,7 @@ export default async function LocationsPage() {
             ))}
           </TableBody>
         </Table>
-      </Paper>
+      </Paper> */}
     </Container>
   );
 }

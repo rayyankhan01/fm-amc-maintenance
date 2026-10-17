@@ -35,6 +35,9 @@ function reportLocation(submission) {
       .join(" / ") || "-"
   );
 }
+function siteCodeOf(submission) {
+  return submission.equipment?.locations?.site_code ?? null;
+}
 
 export default function ReportsTable({ submissions }) {
   const [search, setSearch] = useState("");
@@ -66,11 +69,7 @@ export default function ReportsTable({ submissions }) {
   const locations = useMemo(
     () =>
       [
-        ...new Set(
-          submissions
-            .map((item) => reportLocation(item))
-            .filter((location) => location !== "-"),
-        ),
+        ...new Set(submissions.map((item) => siteCodeOf(item)).filter(Boolean)),
       ].sort(),
     [submissions],
   );
@@ -96,7 +95,8 @@ export default function ReportsTable({ submissions }) {
         matchesSearch &&
         (templateFilter === "all" || template === templateFilter) &&
         (technicianFilter === "all" || technician === technicianFilter) &&
-        (locationFilter === "all" || location === locationFilter) &&
+        (locationFilter === "all" ||
+          siteCodeOf(submission) === locationFilter) &&
         (!dateFilter || submission.inspection_date === dateFilter)
       );
     });
