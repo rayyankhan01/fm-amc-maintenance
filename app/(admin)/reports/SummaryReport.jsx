@@ -66,9 +66,11 @@ export default function SummaryReport({ submissions, equipment, frequencies, rep
   const frequencyByCode = new Map((frequencies ?? []).map((item) => [item.code.toLowerCase(), item.interval_days]));
   function expectedCount(asset) {
     if (!asset?.amc_frequency || asset.amc_frequency.trim() === '-') return null;
-    if (!effectiveFromDate || !effectiveToDate) return 1;
-    const start = new Date(`${effectiveFromDate}T00:00:00Z`);
-    const end = new Date(`${effectiveToDate}T00:00:00Z`);
+    const scheduleStart = asset.amc_date || effectiveFromDate;
+    const scheduleEnd = asset.next_amc_date || effectiveToDate;
+    if (!scheduleStart || !scheduleEnd) return 1;
+    const start = new Date(`${scheduleStart}T00:00:00Z`);
+    const end = new Date(`${scheduleEnd}T00:00:00Z`);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
     const frequency = asset.amc_frequency.toLowerCase();
     if (frequency.includes('week')) {
@@ -91,12 +93,26 @@ export default function SummaryReport({ submissions, equipment, frequencies, rep
     return Math.max(1, Math.ceil(periodDays / intervalDays));
   }
   const submittedCountByAsset = new Map();
-  for (const row of baseRows) {
-    const id = row.equipment_id ?? row.equipment?.id;
-    submittedCountByAsset.set(id, (submittedCountByAsset.get(id) ?? 0) + 1);
+  for (const asset of expectedAssets) {
+    const start = asset.amc_date ? new Date(`${asset.amc_date}T00:00:00Z`) : null;
+    const end = asset.next_amc_date ? new Date(`${asset.next_amc_date}T00:00:00Z`) : null;
+    const count = submissions.filter((submission) => {
+      const date = new Date(`${submission.inspection_date}T00:00:00Z`);
+      const id = submission.equipment_id ?? submission.equipment?.id;
+      return id === asset.id
+        && (!start || date >= start)
+        && (!end || date <= end);
+    }).length;
+    submittedCountByAsset.set(asset.id, count);
+  }
+  function cancellationCount(asset) {
+    const expected = expectedCount(asset);
+    if (expected === null) return null;
+    const submitted = submittedCountByAsset.get(asset.id) ?? 0;
+    return submitted > 0 ? 0 : expected;
   }
   const cancelledRows = expectedAssets
-    .filter((item) => expectedCount(item) > (submittedCountByAsset.get(item.id) ?? 0))
+    .filter((item) => cancellationCount(item) > 0)
     .map((item) => ({ equipment: item, equipment_id: item.id }));
   const filteredRows = useMemo(() => {
     if (metric === 'cancelled') return cancelledRows;
@@ -107,7 +123,7 @@ export default function SummaryReport({ submissions, equipment, frequencies, rep
     });
   }, [baseRows, cancelledRows, metric]);
   const expectedSubmissionCount = expectedAssets.reduce((total, asset) => total + expectedCount(asset), 0);
-  const cancelledCount = expectedAssets.reduce((total, asset) => total + Math.max(expectedCount(asset) - (submittedCountByAsset.get(asset.id) ?? 0), 0), 0);
+  const cancelledCount = expectedAssets.reduce((total, asset) => total + (cancellationCount(asset) ?? 0), 0);
   const maintenanceRows = baseRows.filter(requiresMaintenance);
   const rowsForAssetSummary = metric === 'all' || metric === 'by_asset'
     ? [...expectedAssets.map((item) => ({ equipment: item, equipment_id: item.id })), ...filteredRows]
@@ -118,7 +134,7 @@ export default function SummaryReport({ submissions, equipment, frequencies, rep
       const schedule = expectedAssets.find((record) => equipmentLabel({ equipment: record }) === asset)
         ?? equipment?.find((record) => record.asset_id === asset);
       const expected = expectedCount(schedule);
-      return { asset, count, cancelled: expected === null ? '-' : Math.max(expected - count, 0) };
+      return { asset, count, cancelled: expected === null ? '-' : cancellationCount(schedule) };
     });
   const sortedAssetCounts = useMemo(() => [...assetCounts].sort((left, right) => {
     const leftSource = filteredRows.find((row) => equipmentLabel(row) === left.asset);
