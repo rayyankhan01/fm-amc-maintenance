@@ -208,13 +208,7 @@ export default function SummaryReport({
     return submitted > 0 ? 0 : expected;
   }
   const cancelledRows = expectedAssets
-<<<<<<< HEAD
-    .filter(
-      (item) => expectedCount(item) > (submittedCountByAsset.get(item.id) ?? 0),
-    )
-=======
     .filter((item) => cancellationCount(item) > 0)
->>>>>>> feature/report-summary-tab-admin
     .map((item) => ({ equipment: item, equipment_id: item.id }));
   const filteredRows = useMemo(() => {
     if (metric === "cancelled") return cancelledRows;
@@ -224,107 +218,6 @@ export default function SummaryReport({
       return true;
     });
   }, [baseRows, cancelledRows, metric]);
-<<<<<<< HEAD
-  const expectedSubmissionCount = expectedAssets.reduce(
-    (total, asset) => total + expectedCount(asset),
-    0,
-  );
-  const cancelledCount = expectedAssets.reduce(
-    (total, asset) =>
-      total +
-      Math.max(
-        expectedCount(asset) - (submittedCountByAsset.get(asset.id) ?? 0),
-        0,
-      ),
-    0,
-  );
-  const maintenanceRows = baseRows.filter(requiresMaintenance);
-  const rowsForAssetSummary =
-    metric === "all" || metric === "by_asset"
-      ? [
-          ...expectedAssets.map((item) => ({
-            equipment: item,
-            equipment_id: item.id,
-          })),
-          ...filteredRows,
-        ]
-      : filteredRows;
-  const assetCounts = [
-    ...new Map(
-      rowsForAssetSummary.map((item) => [equipmentLabel(item), 0]),
-    ).keys(),
-  ].map((asset) => {
-    const count = filteredRows.filter(
-      (item) => equipmentLabel(item) === asset,
-    ).length;
-    const schedule =
-      expectedAssets.find(
-        (record) => equipmentLabel({ equipment: record }) === asset,
-      ) ?? equipment?.find((record) => record.asset_id === asset);
-    const expected = expectedCount(schedule);
-    return {
-      asset,
-      count,
-      cancelled: expected === null ? "-" : Math.max(expected - count, 0),
-    };
-  });
-  const sortedAssetCounts = useMemo(
-    () =>
-      [...assetCounts].sort((left, right) => {
-        const leftSource = filteredRows.find(
-          (row) => equipmentLabel(row) === left.asset,
-        );
-        const rightSource = filteredRows.find(
-          (row) => equipmentLabel(row) === right.asset,
-        );
-        const leftSchedule =
-          equipment?.find((record) => record.id === leftSource?.equipment_id) ??
-          leftSource?.equipment;
-        const rightSchedule =
-          equipment?.find(
-            (record) => record.id === rightSource?.equipment_id,
-          ) ?? rightSource?.equipment;
-        const leftValue =
-          sortBy === "asset"
-            ? left.asset
-            : sortBy === "type"
-              ? assetType(leftSource)
-              : sortBy === "location"
-                ? locationLabel(leftSource)
-                : sortBy === "frequency"
-                  ? (leftSchedule?.amc_frequency ?? "-")
-                  : sortBy === "nextAmc"
-                    ? (leftSchedule?.next_amc_date ?? "-")
-                    : sortBy === "cancelled"
-                      ? left.cancelled
-                      : left.count;
-        const rightValue =
-          sortBy === "asset"
-            ? right.asset
-            : sortBy === "type"
-              ? assetType(rightSource)
-              : sortBy === "location"
-                ? locationLabel(rightSource)
-                : sortBy === "frequency"
-                  ? (rightSchedule?.amc_frequency ?? "-")
-                  : sortBy === "nextAmc"
-                    ? (rightSchedule?.next_amc_date ?? "-")
-                    : sortBy === "cancelled"
-                      ? right.cancelled
-                      : right.count;
-        const comparison =
-          typeof leftValue === "number"
-            ? leftValue - rightValue
-            : String(leftValue).localeCompare(String(rightValue));
-        return sortDirection === "asc" ? comparison : -comparison;
-      }),
-    [assetCounts, equipment, filteredRows, sortBy, sortDirection],
-  );
-  const visibleAssetCounts = sortedAssetCounts.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage,
-  );
-=======
   const expectedSubmissionCount = expectedAssets.reduce((total, asset) => total + expectedCount(asset), 0);
   const cancelledCount = expectedAssets.reduce((total, asset) => total + (cancellationCount(asset) ?? 0), 0);
   const maintenanceRows = baseRows.filter(requiresMaintenance);
@@ -352,7 +245,6 @@ export default function SummaryReport({
     return sortDirection === 'asc' ? comparison : -comparison;
   }), [assetCounts, equipment, filteredRows, sortBy, sortDirection]);
   const visibleAssetCounts = sortedAssetCounts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
->>>>>>> feature/report-summary-tab-admin
   function resetPage() {
     setPage(0);
   }
