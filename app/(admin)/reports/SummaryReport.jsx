@@ -152,41 +152,27 @@ export default function SummaryReport({
   );
   function expectedCount(asset) {
     if (!asset?.amc_frequency || asset.amc_frequency.trim() === '-') return null;
-    const scheduleStart = asset.amc_date || effectiveFromDate;
-    const scheduleEnd = asset.next_amc_date || effectiveToDate;
-    if (!scheduleStart || !scheduleEnd) return 1;
-    const start = new Date(`${scheduleStart}T00:00:00Z`);
-    const end = new Date(`${scheduleEnd}T00:00:00Z`);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
     const frequency = asset.amc_frequency.toLowerCase();
-    if (frequency.includes("week")) {
-      let mondayToSaturdayDays = 0;
-      for (
-        const day = new Date(start);
-        day <= end;
-        day.setUTCDate(day.getUTCDate() + 1)
-      ) {
-        if (day.getUTCDay() >= 1 && day.getUTCDay() <= 6)
-          mondayToSaturdayDays += 1;
-      }
-      return Math.floor(mondayToSaturdayDays / 6);
-    }
-    if (frequency.includes("month")) {
-      return (
-        (end.getUTCFullYear() - start.getUTCFullYear()) * 12 +
-        end.getUTCMonth() -
-        start.getUTCMonth() +
-        1
-      );
-    }
-    if (frequency.includes("daily")) {
-      return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
-    }
-    const intervalDays = frequencyByCode.get(frequency);
-    if (!intervalDays) return 1;
-    const periodDays =
-      Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
-    return Math.max(1, Math.ceil(periodDays / intervalDays));
+    const intervalDays = frequency.includes('daily')
+      ? 1
+      : frequency.includes('week')
+        ? 7
+        : frequency.includes('month')
+          ? 30
+          : frequencyByCode.get(frequency);
+    const firstDueDate = asset.next_amc_date || asset.amc_date;
+    if (!firstDueDate || !effectiveFromDate || !effectiveToDate || !intervalDays) return firstDueDate ? 1 : 0;
+    const firstDue = new Date(`${firstDueDate}T00:00:00Z`);
+    const periodStart = new Date(`${effectiveFromDate}T00:00:00Z`);
+    const periodEnd = new Date(`${effectiveToDate}T00:00:00Z`);
+    if ([firstDue, periodStart, periodEnd].some((date) => Number.isNaN(date.getTime())) || periodEnd < periodStart) return 0;
+    const firstOccurrence = firstDue < periodStart
+      ? Math.ceil((periodStart.getTime() - firstDue.getTime()) / (intervalDays * 86400000))
+      : 0;
+    const firstInPeriod = new Date(firstDue);
+    firstInPeriod.setUTCDate(firstInPeriod.getUTCDate() + firstOccurrence * intervalDays);
+    if (firstInPeriod > periodEnd) return 0;
+    return Math.floor((periodEnd.getTime() - firstInPeriod.getTime()) / (intervalDays * 86400000)) + 1;
   }
   const submittedCountByAsset = new Map();
   for (const asset of expectedAssets) {
@@ -218,8 +204,8 @@ export default function SummaryReport({
       return true;
     });
   }, [baseRows, cancelledRows, metric]);
-  const expectedSubmissionCount = expectedAssets.reduce((total, asset) => total + expectedCount(asset), 0);
   const cancelledCount = expectedAssets.reduce((total, asset) => total + (cancellationCount(asset) ?? 0), 0);
+  const actualSubmissionCount = baseRows.length + cancelledCount;
   const maintenanceRows = baseRows.filter(requiresMaintenance);
   const rowsForAssetSummary = metric === 'all' || metric === 'by_asset'
     ? [...expectedAssets.map((item) => ({ equipment: item, equipment_id: item.id })), ...filteredRows]
@@ -401,7 +387,7 @@ export default function SummaryReport({
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <MetricCard
             label="Completed vs actual"
-            value={`${baseRows.length} / ${expectedSubmissionCount}`}
+            value={`${baseRows.length} / ${actualSubmissionCount}`}
             color="secondary"
           />
         </Grid>
