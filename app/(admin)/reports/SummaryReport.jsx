@@ -10,10 +10,7 @@ function equipmentLabel(item) {
 }
 
 function assetType(item) {
-  return item.equipment?.equipment_types?.name
-    ?? item.equipment?.equipment_type
-    ?? item.equipment?.equipment_type_code
-    ?? '-';
+  return item.equipment?.equipment_types?.name ?? '-';
 }
 
 function locationLabel(item) {
