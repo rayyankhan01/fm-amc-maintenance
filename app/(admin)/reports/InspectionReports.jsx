@@ -40,11 +40,6 @@ function locationLabel(item) {
     : "-";
 }
 
-function siteCodeOf(item) {
-  const location = item.locations ?? item.equipment?.locations;
-  return location?.site_code ?? null;
-}
-
 function InspectionHistoryDialog({ equipment }) {
   const [open, setOpen] = useState(false);
   return (
@@ -103,75 +98,6 @@ function InspectionHistoryDialog({ equipment }) {
   );
 }
 
-// Maintenance History Dialog following the same pattern as Inspection History
-
-function MaintenanceHistoryDialog({ equipment }) {
-  const [open, setOpen] = useState(false);
-  const history = equipment.maintenanceHistory ?? [];
-  return (
-    <>
-      <Button
-        size="small"
-        onClick={() => setOpen(true)}
-        disabled={history.length === 0}
-      >
-        {history.length ? `View (${history.length})` : "No history"}
-      </Button>
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        fullWidth
-        maxWidth="lg"
-      >
-        <DialogTitle>
-          Maintenance History : {equipmentLabel(equipment)}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Opened</TableCell>
-                <TableCell>Checklist Item</TableCell>
-                <TableCell>Issue</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Resolution Comment</TableCell>
-                <TableCell>Resolved</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {history.map((issue) => (
-                <TableRow key={issue.id}>
-                  <TableCell>{issue.opened_at?.slice(0, 10)}</TableCell>
-                  <TableCell>
-                    {issue.form_responses?.form_fields?.label ?? "-"}
-                  </TableCell>
-                  <TableCell>{issue.form_responses?.remarks ?? "-"}</TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={issue.status}
-                      color={issue.status === "resolved" ? "success" : "error"}
-                    />
-                  </TableCell>
-                  <TableCell>{issue.resolution_comment ?? "-"}</TableCell>
-                  <TableCell>
-                    {issue.status === "resolved"
-                      ? `${issue.resolved_at?.slice(0, 10) ?? "-"} by ${issue.resolverName ?? "-"}`
-                      : "-"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </>
-  );
-}
-
 function ScheduleTable({ rows }) {
   return (
     <Paper
@@ -188,7 +114,6 @@ function ScheduleTable({ rows }) {
             <TableCell>Frequency</TableCell>
             <TableCell>Next AMC</TableCell>
             <TableCell>Inspection History</TableCell>
-            <TableCell>Maintenance History</TableCell>
             <TableCell>Status</TableCell>
           </TableRow>
         </TableHead>
@@ -202,9 +127,6 @@ function ScheduleTable({ rows }) {
               <TableCell>{item.next_amc_date ?? "-"}</TableCell>
               <TableCell>
                 <InspectionHistoryDialog equipment={item} />
-              </TableCell>
-              <TableCell>
-                <MaintenanceHistoryDialog equipment={item} />
               </TableCell>
               <TableCell>
                 <Chip
@@ -223,7 +145,7 @@ function ScheduleTable({ rows }) {
           ))}
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8}>No records found.</TableCell>
+              <TableCell colSpan={7}>No records found.</TableCell>
             </TableRow>
           )}
         </TableBody>
@@ -291,15 +213,6 @@ export default function InspectionReports({ reportData }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [summaryLocation, setSummaryLocation] = useState("all");
-  const [summaryPeriod, setSummaryPeriod] = useState(
-    formatReportPeriod(
-      reportData.completed.map((submission) => submission.inspection_date),
-    ),
-  );
-  const completedDates = reportData.completed
-    .map((submission) => submission.inspection_date)
-    .filter(Boolean)
-    .sort();
   const selectedRows =
     tab === "equipment"
       ? reportData.equipment
@@ -313,8 +226,8 @@ export default function InspectionReports({ reportData }) {
   const locations = [
     ...new Set(
       [...reportData.equipment, ...reportData.nok]
-        .map(siteCodeOf)
-        .filter(Boolean),
+        .map(locationLabel)
+        .filter((value) => value !== "-"),
     ),
   ].sort();
   const filteredRows = selectedRows.filter((item) => {
@@ -347,7 +260,7 @@ export default function InspectionReports({ reportData }) {
     const matchesLocation =
       !["equipment", "nok"].includes(tab) ||
       location === "all" ||
-      siteCodeOf(item) === location;
+      locationLabel(item) === location;
     return (
       (!search || text.includes(search.toLowerCase())) &&
       ((!fromDate && !toDate) || matchesDateRange) &&
@@ -413,7 +326,9 @@ export default function InspectionReports({ reportData }) {
             : "Consolidated Inspection Report"
         }
         description={descriptionByTab[tab]}
-        period={tab === "summary" ? summaryPeriod : period}
+        period={tab === "summary"
+          ? formatReportPeriod(reportData.completed.map((submission) => submission.inspection_date))
+          : period}
         siteLocation={
           tab === "summary"
             ? summaryLocation === "all"
@@ -444,10 +359,7 @@ export default function InspectionReports({ reportData }) {
           submissions={reportData.completed}
           equipment={reportData.equipment}
           frequencies={reportData.frequencies}
-          reportStartDate={completedDates[0]}
-          reportEndDate={completedDates[completedDates.length - 1]}
           onLocationChange={setSummaryLocation}
-          onPeriodChange={setSummaryPeriod}
         />
       )}
       {tab !== "summary" && (
