@@ -125,6 +125,9 @@ export default function SummaryReport({ submissions, equipment, frequencies, onL
     });
   }, [baseRows, cancelledRows, metric]);
   const cardRows = metric === 'cancelled' ? baseRows : filteredRows;
+  const completedAssetCount = new Set(cardRows
+    .map((item) => item.equipment_id ?? item.equipment?.id)
+    .filter(Boolean)).size;
   const cancelledCount = expectedAssets.reduce((total, asset) => total + (cancellationCount(asset) ?? 0), 0);
   const maintenanceRows = cardRows.filter(requiresMaintenance);
   const rowsForAssetSummary = metric === 'all' || metric === 'by_asset'
@@ -187,7 +190,7 @@ export default function SummaryReport({ submissions, equipment, frequencies, onL
     </Stack>
     <Grid container spacing={2}>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Inspections completed" value={cardRows.length} color="primary" /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={assetCounts.length} color="info" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={completedAssetCount} color="info" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} color="warning" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={cardRows.length - maintenanceRows.length} color="success" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed vs actual" value={`${cardRows.length} / ${cardRows.length + cancelledCount}`} color="secondary" /></Grid>
