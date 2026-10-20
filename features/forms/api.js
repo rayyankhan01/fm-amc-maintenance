@@ -111,19 +111,57 @@ export async function submitInspection(supabase, input) {
 
   const { data: equipment } = await supabase
     .from("equipment")
-    .select("amc_frequency")
+    .select("amc_date, amc_frequency")
     .eq("id", equipment_id)
     .single();
   if (equipment?.amc_frequency) {
-    const { data: frequency } = await supabase
+    let { data: frequency } = await supabase
       .from("maintenance_frequencies")
       .select("interval_days")
-      .eq("label", equipment.amc_frequency)
+      .eq("code", equipment.amc_frequency)
       .maybeSingle();
+    if (!frequency) {
+      ({ data: frequency } = await supabase
+        .from("maintenance_frequencies")
+        .select("interval_days")
+        .eq("label", equipment.amc_frequency)
+        .maybeSingle());
+    }
 
     if (frequency?.interval_days) {
+      const intervalDays = frequency.interval_days;
+      const scheduledOccurrences = [];
+      if (equipment.amc_date) {
+        const scheduledDate = new Date(`${equipment.amc_date}T00:00:00Z`);
+        const inspectionDate = new Date(`${inspection_date}T00:00:00Z`);
+        while (scheduledDate < inspectionDate) {
+          scheduledOccurrences.push({
+            equipment_id,
+            scheduled_date: scheduledDate.toISOString().slice(0, 10),
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+          });
+          scheduledDate.setUTCDate(scheduledDate.getUTCDate() + intervalDays);
+        }
+      }
+      const currentOccurrence = {
+        equipment_id,
+        scheduled_date: inspection_date,
+        status: "completed",
+        submission_id: submission.id,
+        completed_at: new Date().toISOString(),
+      };
+      const { error: cancelledOccurrenceError } = await supabase
+        .from("inspection_schedule_occurrences")
+        .upsert(scheduledOccurrences, { onConflict: "equipment_id,scheduled_date", ignoreDuplicates: true });
+      if (cancelledOccurrenceError) throw cancelledOccurrenceError;
+      const { error: occurrenceError } = await supabase
+        .from("inspection_schedule_occurrences")
+        .upsert(currentOccurrence, { onConflict: "equipment_id,scheduled_date" });
+      if (occurrenceError) throw occurrenceError;
+
       const nextDate = new Date(`${inspection_date}T00:00:00Z`);
-      nextDate.setUTCDate(nextDate.getUTCDate() + frequency.interval_days);
+      nextDate.setUTCDate(nextDate.getUTCDate() + intervalDays);
       const { error: nextDateError } = await supabase
         .from("equipment")
         .update({ next_amc_date: nextDate.toISOString().slice(0, 10) })

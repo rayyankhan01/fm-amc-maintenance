@@ -41,7 +41,7 @@ function metricLabel(value) {
   }[value] ?? value;
 }
 
-export default function SummaryReport({ submissions, equipment, frequencies, onLocationChange }) {
+export default function SummaryReport({ submissions, equipment, frequencies, occurrences = [], onLocationChange }) {
   const amcDates = (equipment ?? []).map((item) => item.amc_date).filter(Boolean).sort();
   const [fromDate, setFromDate] = useState(amcDates[0] ?? '');
   const [toDate, setToDate] = useState(amcDates[amcDates.length - 1] ?? '');
@@ -65,11 +65,23 @@ export default function SummaryReport({ submissions, equipment, frequencies, onL
       && (type === 'all' || assetType(item) === type);
   }), [location, submissions, type]);
   const frequencyByCode = new Map((frequencies ?? []).map((item) => [item.code.toLowerCase(), item.interval_days]));
-  function expectedCount(asset) {
+  const todayDubai = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dubai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const occurrencesByAsset = new Map();
+  for (const occurrence of occurrences) {
+    const history = occurrencesByAsset.get(occurrence.equipment_id) ?? [];
+    history.push(occurrence);
+    occurrencesByAsset.set(occurrence.equipment_id, history);
+  }
+  function expectedCount(asset, endDate = asset?.next_amc_date) {
     if (!asset?.amc_frequency || asset.amc_frequency.trim() === '-') return null;
-    if (!asset.amc_date || !asset.next_amc_date) return null;
+    if (!asset.amc_date || !endDate) return null;
     const start = new Date(`${asset.amc_date}T00:00:00Z`);
-    const end = new Date(`${asset.next_amc_date}T00:00:00Z`);
+    const end = new Date(`${endDate}T00:00:00Z`);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
     const frequency = asset.amc_frequency.toLowerCase();
     if (frequency.includes('week')) {
@@ -91,40 +103,33 @@ export default function SummaryReport({ submissions, equipment, frequencies, onL
     const periodDays = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
     return Math.max(1, Math.ceil(periodDays / intervalDays));
   }
-  const submittedCountByAsset = new Map();
-  for (const asset of expectedAssets) {
-    const start = asset.amc_date ? new Date(`${asset.amc_date}T00:00:00Z`) : null;
-    const end = asset.next_amc_date ? new Date(`${asset.next_amc_date}T00:00:00Z`) : null;
-    const count = submissions.filter((submission) => {
-      const date = new Date(`${submission.inspection_date}T00:00:00Z`);
-      const id = submission.equipment_id ?? submission.equipment?.id;
-      return id === asset.id
-        && (!start || date >= start)
-        && (!end || date <= end);
-    }).length;
-    submittedCountByAsset.set(asset.id, count);
-  }
   function cancellationCount(asset) {
-    const expected = expectedCount(asset);
-    if (expected === null) return null;
-    const submitted = submittedCountByAsset.get(asset.id) ?? 0;
-    return submitted > 0 ? 0 : expected;
+    const history = occurrencesByAsset.get(asset?.id);
+    if (history?.length) return history.filter((item) => item.status === 'cancelled').length;
+    if (!asset?.amc_date || asset.amc_date >= todayDubai) return 0;
+    const yesterday = new Date(`${todayDubai}T00:00:00Z`);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    return expectedCount(asset, yesterday.toISOString().slice(0, 10));
   }
   const cancelledRows = expectedAssets
     .filter((item) => cancellationCount(item) > 0)
     .map((item) => ({ equipment: item, equipment_id: item.id }));
-  const filteredRows = useMemo(() => {
-    if (metric === 'cancelled') return cancelledRows;
-    return baseRows.filter((item) => {
+  const filteredRows = metric === 'cancelled'
+    ? cancelledRows
+    : baseRows.filter((item) => {
       if (metric === 'requiring') return requiresMaintenance(item);
       if (metric === 'without') return !requiresMaintenance(item);
       return true;
     });
-  }, [baseRows, cancelledRows, metric]);
   const cardRows = metric === 'cancelled' ? baseRows : filteredRows;
   const completedAssetCount = new Set(cardRows
     .map((item) => item.equipment_id ?? item.equipment?.id)
     .filter(Boolean)).size;
+  const completedCountByAsset = new Map();
+  for (const occurrence of occurrences) {
+    if (occurrence.status !== 'completed') continue;
+    completedCountByAsset.set(occurrence.equipment_id, (completedCountByAsset.get(occurrence.equipment_id) ?? 0) + 1);
+  }
   const cancelledCount = expectedAssets.reduce((total, asset) => total + (cancellationCount(asset) ?? 0), 0);
   const maintenanceRows = cardRows.filter(requiresMaintenance);
   const rowsForAssetSummary = metric === 'all' || metric === 'by_asset'
@@ -132,9 +137,11 @@ export default function SummaryReport({ submissions, equipment, frequencies, onL
     : filteredRows;
   const assetCounts = [...new Map(rowsForAssetSummary.map((item) => [equipmentLabel(item), 0])).keys()]
     .map((asset) => {
-      const count = filteredRows.filter((item) => equipmentLabel(item) === asset).length;
       const schedule = expectedAssets.find((record) => equipmentLabel({ equipment: record }) === asset)
         ?? equipment?.find((record) => record.asset_id === asset);
+      const count = schedule && occurrencesByAsset.has(schedule.id)
+        ? completedCountByAsset.get(schedule.id) ?? 0
+        : filteredRows.filter((item) => equipmentLabel(item) === asset).length;
       const expected = expectedCount(schedule);
       return { asset, count, cancelled: expected === null ? '-' : cancellationCount(schedule) };
     });

@@ -359,6 +359,7 @@ export default function InspectionReports({ reportData }) {
           submissions={reportData.completed}
           equipment={reportData.equipment}
           frequencies={reportData.frequencies}
+          occurrences={reportData.occurrences}
           onLocationChange={setSummaryLocation}
         />
       )}
