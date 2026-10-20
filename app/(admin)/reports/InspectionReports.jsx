@@ -40,6 +40,11 @@ function locationLabel(item) {
     : "-";
 }
 
+function siteCodeOf(item) {
+  const location = item.locations ?? item.equipment?.locations;
+  return location?.site_code ?? null;
+}
+
 function InspectionHistoryDialog({ equipment }) {
   const [open, setOpen] = useState(false);
   return (
@@ -262,8 +267,8 @@ export default function InspectionReports({ reportData }) {
   const locations = [
     ...new Set(
       [...reportData.equipment, ...reportData.nok]
-        .map(locationLabel)
-        .filter((value) => value !== "-"),
+        .map(siteCodeOf)
+        .filter(Boolean),
     ),
   ].sort();
   const filteredRows = selectedRows.filter((item) => {
@@ -296,7 +301,7 @@ export default function InspectionReports({ reportData }) {
     const matchesLocation =
       !["equipment", "nok"].includes(tab) ||
       location === "all" ||
-      locationLabel(item) === location;
+      siteCodeOf(item) === location;
     return (
       (!search || text.includes(search.toLowerCase())) &&
       ((!fromDate && !toDate) || matchesDateRange) &&

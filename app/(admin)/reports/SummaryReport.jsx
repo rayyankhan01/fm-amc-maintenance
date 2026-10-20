@@ -23,6 +23,10 @@ function siteLabel(item) {
   return location ? [location.site_name, location.site_code].filter(Boolean).join(' / ') || '-' : '-';
 }
 
+function siteCode(item) {
+  return item.equipment?.locations?.site_code ?? null;
+}
+
 function requiresMaintenance(item) {
   return (item.form_responses ?? []).some((response) => response.result === 'N_OK');
 }
@@ -52,16 +56,16 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState('asset');
   const [sortDirection, setSortDirection] = useState('asc');
-  const locations = useMemo(() => [...new Set(submissions.map(siteLabel).filter((value) => value !== '-'))].sort(), [submissions]);
+  const locations = useMemo(() => [...new Set(submissions.map(siteCode).filter(Boolean))].sort(), [submissions]);
   const assetTypes = useMemo(() => [...new Set(submissions.map(assetType).filter((value) => value !== '-'))].sort(), [submissions]);
   const expectedAssets = useMemo(() => (equipment ?? []).filter((item) =>
     (!fromDate || (item.amc_date && item.amc_date >= fromDate))
     && (!toDate || (item.amc_date && item.amc_date <= toDate))
-    && (location === 'all' || siteLabel({ equipment: item }) === location)
+    && (location === 'all' || siteCode({ equipment: item }) === location)
     && (type === 'all' || assetType({ equipment: item }) === type),
   ), [equipment, fromDate, location, toDate, type]);
   const baseRows = useMemo(() => submissions.filter((item) => {
-    return (location === 'all' || siteLabel(item) === location)
+    return (location === 'all' || siteCode(item) === location)
       && (type === 'all' || assetType(item) === type);
   }), [location, submissions, type]);
   const frequencyByCode = new Map((frequencies ?? []).map((item) => [item.code.toLowerCase(), item.interval_days]));
