@@ -98,6 +98,40 @@ function InspectionHistoryDialog({ equipment }) {
   );
 }
 
+function MaintenanceHistoryDialog({ equipment }) {
+  const [open, setOpen] = useState(false);
+  const history = equipment.maintenanceHistory ?? [];
+  return (
+    <>
+      <Button size="small" onClick={() => setOpen(true)} disabled={history.length === 0}>
+        {history.length ? `View (${history.length})` : "No history"}
+      </Button>
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="lg">
+        <DialogTitle>Maintenance History: {equipmentLabel(equipment)}</DialogTitle>
+        <DialogContent dividers>
+          <Table>
+            <TableHead><TableRow>
+              <TableCell>Opened</TableCell><TableCell>Checklist Item</TableCell><TableCell>Issue</TableCell>
+              <TableCell>Status</TableCell><TableCell>Resolution Comment</TableCell><TableCell>Resolved</TableCell>
+            </TableRow></TableHead>
+            <TableBody>{history.map((issue) => (
+              <TableRow key={issue.id}>
+                <TableCell>{issue.opened_at?.slice(0, 10)}</TableCell>
+                <TableCell>{issue.form_responses?.form_fields?.label ?? "-"}</TableCell>
+                <TableCell>{issue.form_responses?.remarks ?? "-"}</TableCell>
+                <TableCell><Chip size="small" label={issue.status} color={issue.status === "resolved" ? "success" : "error"} /></TableCell>
+                <TableCell>{issue.resolution_comment ?? "-"}</TableCell>
+                <TableCell>{issue.status === "resolved" ? `${issue.resolved_at?.slice(0, 10) ?? "-"} by ${issue.resolverName ?? "-"}` : "-"}</TableCell>
+              </TableRow>
+            ))}</TableBody>
+          </Table>
+        </DialogContent>
+        <DialogActions><Button onClick={() => setOpen(false)}>Close</Button></DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
 function ScheduleTable({ rows }) {
   return (
     <Paper
@@ -114,6 +148,7 @@ function ScheduleTable({ rows }) {
             <TableCell>Frequency</TableCell>
             <TableCell>Next AMC</TableCell>
             <TableCell>Inspection History</TableCell>
+            <TableCell>Maintenance History</TableCell>
             <TableCell>Status</TableCell>
           </TableRow>
         </TableHead>
@@ -128,6 +163,7 @@ function ScheduleTable({ rows }) {
               <TableCell>
                 <InspectionHistoryDialog equipment={item} />
               </TableCell>
+              <TableCell><MaintenanceHistoryDialog equipment={item} /></TableCell>
               <TableCell>
                 <Chip
                   size="small"
@@ -145,7 +181,7 @@ function ScheduleTable({ rows }) {
           ))}
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7}>No records found.</TableCell>
+              <TableCell colSpan={8}>No records found.</TableCell>
             </TableRow>
           )}
         </TableBody>
