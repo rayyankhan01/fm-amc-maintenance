@@ -118,13 +118,13 @@ export async function submitInspection(supabase, input) {
     let { data: frequency } = await supabase
       .from("maintenance_frequencies")
       .select("interval_days")
-      .eq("code", equipment.amc_frequency)
+      .ilike("code", equipment.amc_frequency)
       .maybeSingle();
     if (!frequency) {
       ({ data: frequency } = await supabase
         .from("maintenance_frequencies")
         .select("interval_days")
-        .eq("label", equipment.amc_frequency)
+        .ilike("label", equipment.amc_frequency)
         .maybeSingle());
     }
 
@@ -151,10 +151,12 @@ export async function submitInspection(supabase, input) {
         submission_id: submission.id,
         completed_at: new Date().toISOString(),
       };
-      const { error: cancelledOccurrenceError } = await supabase
-        .from("inspection_schedule_occurrences")
-        .upsert(scheduledOccurrences, { onConflict: "equipment_id,scheduled_date", ignoreDuplicates: true });
-      if (cancelledOccurrenceError) throw cancelledOccurrenceError;
+      if (scheduledOccurrences.length > 0) {
+        const { error: cancelledOccurrenceError } = await supabase
+          .from("inspection_schedule_occurrences")
+          .upsert(scheduledOccurrences, { onConflict: "equipment_id,scheduled_date", ignoreDuplicates: true });
+        if (cancelledOccurrenceError) throw cancelledOccurrenceError;
+      }
       const { error: occurrenceError } = await supabase
         .from("inspection_schedule_occurrences")
         .upsert(currentOccurrence, { onConflict: "equipment_id,scheduled_date" });
