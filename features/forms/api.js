@@ -111,7 +111,7 @@ export async function submitInspection(supabase, input) {
 
   const { data: equipment } = await supabase
     .from("equipment")
-    .select("amc_date, amc_frequency")
+    .select("amc_date, next_amc_date, amc_frequency")
     .eq("id", equipment_id)
     .single();
   if (equipment?.amc_frequency) {
@@ -131,8 +131,8 @@ export async function submitInspection(supabase, input) {
     if (frequency?.interval_days) {
       const intervalDays = frequency.interval_days;
       const scheduledOccurrences = [];
-      if (equipment.amc_date) {
-        const scheduledDate = new Date(`${equipment.amc_date}T00:00:00Z`);
+      if (equipment.next_amc_date || equipment.amc_date) {
+        const scheduledDate = new Date(`${equipment.next_amc_date ?? equipment.amc_date}T00:00:00Z`);
         const inspectionDate = new Date(`${inspection_date}T00:00:00Z`);
         while (scheduledDate < inspectionDate) {
           scheduledOccurrences.push({
