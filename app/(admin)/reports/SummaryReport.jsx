@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, CardContent, Grid, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, TableSortLabel, TextField, Typography } from '@mui/material';
 import { printReport } from './reportPrint';
 
@@ -45,7 +45,7 @@ function metricLabel(value) {
   }[value] ?? value;
 }
 
-export default function SummaryReport({ submissions, equipment, frequencies, occurrences = [], onLocationChange }) {
+export default function SummaryReport({ submissions, equipment, frequencies, occurrences = [], onLocationChange, onPeriodChange }) {
   const amcDates = (equipment ?? []).map((item) => item.amc_date).filter(Boolean).sort();
   const [fromDate, setFromDate] = useState(amcDates[0] ?? '');
   const [toDate, setToDate] = useState(amcDates[amcDates.length - 1] ?? '');
@@ -56,6 +56,16 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState('asset');
   const [sortDirection, setSortDirection] = useState('asc');
+  useEffect(() => {
+    const period = fromDate && toDate
+      ? `${fromDate} to ${toDate}`
+      : fromDate
+        ? `From ${fromDate}`
+        : toDate
+          ? `Until ${toDate}`
+          : 'No AMC dates available';
+    onPeriodChange?.(period);
+  }, [fromDate, onPeriodChange, toDate]);
   const locations = useMemo(() => [...new Set(submissions.map(siteCode).filter(Boolean))].sort(), [submissions]);
   const assetTypes = useMemo(() => [...new Set(submissions.map(assetType).filter((value) => value !== '-'))].sort(), [submissions]);
   const expectedAssets = useMemo(() => (equipment ?? []).filter((item) =>

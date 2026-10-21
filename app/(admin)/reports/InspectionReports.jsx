@@ -254,6 +254,9 @@ export default function InspectionReports({ reportData }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [summaryLocation, setSummaryLocation] = useState("all");
+  const [summaryPeriod, setSummaryPeriod] = useState(
+    formatReportPeriod(reportData.completed.map((submission) => submission.inspection_date)),
+  );
   const selectedRows =
     tab === "equipment"
       ? reportData.equipment
@@ -367,9 +370,7 @@ export default function InspectionReports({ reportData }) {
             : "Consolidated Inspection Report"
         }
         description={descriptionByTab[tab]}
-        period={tab === "summary"
-          ? formatReportPeriod(reportData.completed.map((submission) => submission.inspection_date))
-          : period}
+        period={tab === "summary" ? summaryPeriod : period}
         siteLocation={
           tab === "summary"
             ? summaryLocation === "all"
@@ -402,6 +403,7 @@ export default function InspectionReports({ reportData }) {
           frequencies={reportData.frequencies}
           occurrences={reportData.occurrences}
           onLocationChange={setSummaryLocation}
+          onPeriodChange={setSummaryPeriod}
         />
       )}
       {tab !== "summary" && (
