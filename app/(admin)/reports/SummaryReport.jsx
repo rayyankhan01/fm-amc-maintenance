@@ -69,15 +69,17 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
   const locations = useMemo(() => [...new Set(submissions.map(siteCode).filter(Boolean))].sort(), [submissions]);
   const assetTypes = useMemo(() => [...new Set(submissions.map(assetType).filter((value) => value !== '-'))].sort(), [submissions]);
   const expectedAssets = useMemo(() => (equipment ?? []).filter((item) =>
-    (!fromDate || (item.amc_date && item.amc_date >= fromDate))
+    (!fromDate || (item.next_amc_date && item.next_amc_date >= fromDate))
     && (!toDate || (item.amc_date && item.amc_date <= toDate))
     && (location === 'all' || siteCode({ equipment: item }) === location)
     && (type === 'all' || assetType({ equipment: item }) === type),
   ), [equipment, fromDate, location, toDate, type]);
   const baseRows = useMemo(() => submissions.filter((item) => {
-    return (location === 'all' || siteCode(item) === location)
+    return (!fromDate || (item.inspection_date && item.inspection_date >= fromDate))
+      && (!toDate || (item.inspection_date && item.inspection_date <= toDate))
+      && (location === 'all' || siteCode(item) === location)
       && (type === 'all' || assetType(item) === type);
-  }), [location, submissions, type]);
+  }), [fromDate, location, submissions, toDate, type]);
   const frequencyByCode = new Map((frequencies ?? []).map((item) => [item.code.toLowerCase(), item.interval_days]));
   const todayDubai = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Dubai',
