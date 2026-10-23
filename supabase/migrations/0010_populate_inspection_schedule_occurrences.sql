@@ -12,6 +12,7 @@ declare
   submission_date date;
   submission_timestamp timestamptz;
   latest_completed_date date;
+  schedule_end date;
   today_uae date := (now() at time zone 'Asia/Dubai')::date;
 begin
   insert into inspection_schedule_occurrences (
@@ -77,8 +78,9 @@ begin
     end if;
 
     due_date := period_start + asset.interval_days;
+    schedule_end := least(asset.next_amc_date, today_uae);
 
-    while due_date < today_uae loop
+    while due_date < schedule_end loop
       submission_id := null;
       submission_date := null;
       submission_timestamp := null;
@@ -130,7 +132,7 @@ begin
     )
     values (
       asset.id,
-      due_date,
+      asset.next_amc_date,
       'pending'
     )
     on conflict (equipment_id, scheduled_date) do update
@@ -138,10 +140,6 @@ begin
         cancelled_at = null
     where inspection_schedule_occurrences.status <> 'completed';
 
-    update equipment
-    set next_amc_date = due_date
-    where id = asset.id
-      and next_amc_date is distinct from due_date;
   end loop;
 end;
 $$;
