@@ -37,18 +37,22 @@ function MetricCard({ label, value, color }) {
 
 function metricLabel(value) {
   return {
-    all: 'All completed inspections',
+    all: 'All Assets',
     by_asset: 'Completed Inspections by Asset',
     requiring: 'Inspections Requiring Maintenance',
-    without: 'Inspections Not Requiring Maintenance',
     cancelled: 'Cancelled Inspections',
   }[value] ?? value;
 }
 
 export default function SummaryReport({ submissions, equipment, frequencies, occurrences = [], onLocationChange, onPeriodChange }) {
-  const amcDates = (equipment ?? []).map((item) => item.amc_date).filter(Boolean).sort();
-  const [fromDate, setFromDate] = useState(amcDates[0] ?? '');
-  const [toDate, setToDate] = useState(amcDates[amcDates.length - 1] ?? '');
+  const todayDubai = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dubai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const [fromDate, setFromDate] = useState(`${todayDubai.slice(0, 7)}-01`);
+  const [toDate, setToDate] = useState(todayDubai);
   const [location, setLocation] = useState('all');
   const [type, setType] = useState('all');
   const [metric, setMetric] = useState('all');
@@ -81,18 +85,29 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
       && (type === 'all' || assetType(item) === type);
   }), [fromDate, location, submissions, toDate, type]);
   const frequencyByCode = new Map((frequencies ?? []).map((item) => [item.code.toLowerCase(), item.interval_days]));
-  const todayDubai = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Dubai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
   const occurrencesByAsset = new Map();
   for (const occurrence of occurrences) {
     const history = occurrencesByAsset.get(occurrence.equipment_id) ?? [];
     history.push(occurrence);
     occurrencesByAsset.set(occurrence.equipment_id, history);
   }
+  const equipmentById = new Map((equipment ?? []).map((item) => [item.id, item]));
+  const metricAssetIds = metric === 'all' || metric === 'cancelled'
+    ? null
+    : new Set(baseRows
+      .filter((item) => metric !== 'requiring' || requiresMaintenance(item))
+      .map((item) => item.equipment_id ?? item.equipment?.id)
+      .filter(Boolean));
+  const cancelledOccurrences = occurrences.filter((occurrence) => {
+    const asset = equipmentById.get(occurrence.equipment_id);
+    return occurrence.status === 'cancelled'
+      && asset
+      && (!metricAssetIds || metricAssetIds.has(occurrence.equipment_id))
+      && (!fromDate || (occurrence.scheduled_date && occurrence.scheduled_date >= fromDate))
+      && (!toDate || (occurrence.scheduled_date && occurrence.scheduled_date <= toDate))
+      && (location === 'all' || asset.locations?.site_code === location)
+      && (type === 'all' || assetType({ equipment: asset }) === type);
+  });
   function expectedCount(asset, endDate = asset?.next_amc_date) {
     if (!asset?.amc_frequency || asset.amc_frequency.trim() === '-') return null;
     if (!asset.amc_date || !endDate) return null;
@@ -120,33 +135,34 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
     return Math.max(1, Math.ceil(periodDays / intervalDays));
   }
   function cancellationCount(asset) {
-    const history = occurrencesByAsset.get(asset?.id);
-    if (history?.length) return history.filter((item) => item.status === 'cancelled').length;
-    if (!asset?.amc_date || asset.amc_date >= todayDubai) return 0;
-    const yesterday = new Date(`${todayDubai}T00:00:00Z`);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    return expectedCount(asset, yesterday.toISOString().slice(0, 10));
+    return cancelledOccurrences.filter((item) => item.equipment_id === asset?.id).length;
   }
-  const cancelledRows = expectedAssets
-    .filter((item) => cancellationCount(item) > 0)
+  const cancelledRows = [...new Set(cancelledOccurrences.map((occurrence) => occurrence.equipment_id))]
+    .map((equipmentId) => equipmentById.get(equipmentId))
+    .filter(Boolean)
     .map((item) => ({ equipment: item, equipment_id: item.id }));
   const filteredRows = metric === 'cancelled'
     ? cancelledRows
     : baseRows.filter((item) => {
       if (metric === 'requiring') return requiresMaintenance(item);
-      if (metric === 'without') return !requiresMaintenance(item);
       return true;
     });
-  const cardRows = metric === 'cancelled' ? baseRows : filteredRows;
+  const cardRows = metric === 'cancelled' ? [] : filteredRows;
   const completedAssetCount = new Set(cardRows
     .map((item) => item.equipment_id ?? item.equipment?.id)
     .filter(Boolean)).size;
   const completedCountByAsset = new Map();
   for (const occurrence of occurrences) {
     if (occurrence.status !== 'completed') continue;
+    if (metricAssetIds && !metricAssetIds.has(occurrence.equipment_id)) continue;
+    if (fromDate && (!occurrence.scheduled_date || occurrence.scheduled_date < fromDate)) continue;
+    if (toDate && (!occurrence.scheduled_date || occurrence.scheduled_date > toDate)) continue;
+    const asset = equipmentById.get(occurrence.equipment_id);
+    if (!asset) continue;
+    if (location !== 'all' && asset.locations?.site_code !== location) continue;
+    if (type !== 'all' && assetType({ equipment: asset }) !== type) continue;
     completedCountByAsset.set(occurrence.equipment_id, (completedCountByAsset.get(occurrence.equipment_id) ?? 0) + 1);
   }
-  const cancelledCount = expectedAssets.reduce((total, asset) => total + (cancellationCount(asset) ?? 0), 0);
   const maintenanceRows = cardRows.filter(requiresMaintenance);
   const rowsForAssetSummary = metric === 'all' || metric === 'by_asset'
     ? [...expectedAssets.map((item) => ({ equipment: item, equipment_id: item.id })), ...filteredRows]
@@ -160,7 +176,10 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
         : filteredRows.filter((item) => equipmentLabel(item) === asset).length;
       const expected = expectedCount(schedule);
       return { asset, count, cancelled: expected === null ? '-' : cancellationCount(schedule) };
-    });
+    })
+    .filter((item) => metric !== 'by_asset' || item.count > 0);
+  const displayedCompletedCount = assetCounts.reduce((total, item) => total + item.count, 0);
+  const displayedCancelledCount = assetCounts.reduce((total, item) => total + (typeof item.cancelled === 'number' ? item.cancelled : 0), 0);
   const sortedAssetCounts = useMemo(() => [...assetCounts].sort((left, right) => {
     const leftSource = filteredRows.find((row) => equipmentLabel(row) === left.asset);
     const rightSource = filteredRows.find((row) => equipmentLabel(row) === right.asset);
@@ -198,10 +217,9 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
       <TextField select label="Location" value={location} onChange={(event) => { setLocation(event.target.value); onLocationChange?.(event.target.value); resetPage(); }} sx={{ minWidth: 220 }}><MenuItem value="all">All locations</MenuItem>{locations.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
       <TextField select label="Asset type" value={type} onChange={(event) => { setType(event.target.value); resetPage(); }} sx={{ minWidth: 180 }}><MenuItem value="all">All asset types</MenuItem>{assetTypes.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
       <TextField select label="Summary metric" value={metric} onChange={(event) => { setMetric(event.target.value); resetPage(); }} sx={{ minWidth: 220 }}>
-        <MenuItem value="all">All completed inspections</MenuItem>
+        <MenuItem value="all">All Assets</MenuItem>
         <MenuItem value="by_asset">Completed Inspections by Asset</MenuItem>
         <MenuItem value="requiring">Inspections Requiring Maintenance</MenuItem>
-        <MenuItem value="without">Inspections Not Requiring Maintenance</MenuItem>
         <MenuItem value="cancelled">Cancelled Inspections</MenuItem>
       </TextField>
     </Stack>
@@ -209,12 +227,12 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
       <Button variant="outlined" onClick={exportPdf}>Export PDF</Button>
     </Stack>
     <Grid container spacing={2}>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Inspections completed" value={cardRows.length} color="primary" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Inspections completed" value={displayedCompletedCount} color="primary" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={completedAssetCount} color="info" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} color="warning" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={cardRows.length - maintenanceRows.length} color="success" /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed vs actual" value={`${cardRows.length} / ${cardRows.length + cancelledCount}`} color="secondary" /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Cancelled inspections" value={cancelledCount} color="error" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed vs actual" value={`${displayedCompletedCount} / ${displayedCompletedCount + displayedCancelledCount}`} color="secondary" /></Grid>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Cancelled inspections" value={displayedCancelledCount} color="error" /></Grid>
     </Grid>
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 3 }}>
       <Typography variant="body2"><strong>Asset type:</strong> {type === 'all' ? 'All asset types' : type}</Typography>
