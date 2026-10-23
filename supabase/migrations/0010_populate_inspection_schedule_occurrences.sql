@@ -76,6 +76,8 @@ begin
       period_start := latest_completed_date;
     end if;
 
+    due_date := period_start + asset.interval_days;
+
     while due_date < today_uae loop
       submission_id := null;
       submission_date := null;
