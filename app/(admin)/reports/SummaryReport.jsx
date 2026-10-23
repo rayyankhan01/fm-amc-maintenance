@@ -230,7 +230,7 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Inspections completed" value={displayedCompletedCount} color="primary" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed by asset" value={completedAssetCount} color="info" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Requiring maintenance" value={maintenanceRows.length} color="warning" /></Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={cardRows.length - maintenanceRows.length} color="success" /></Grid>
+      {/* <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Without maintenance" value={cardRows.length - maintenanceRows.length} color="success" /></Grid> */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Completed vs actual" value={`${displayedCompletedCount} / ${displayedCompletedCount + displayedCancelledCount}`} color="secondary" /></Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}><MetricCard label="Cancelled inspections" value={displayedCancelledCount} color="error" /></Grid>
     </Grid>
