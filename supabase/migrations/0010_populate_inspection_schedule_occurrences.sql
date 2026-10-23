@@ -8,40 +8,11 @@ declare
   asset record;
   period_start date;
   due_date date;
-  submission_id uuid;
+  matched_submission_id uuid;
   submission_date date;
   submission_timestamp timestamptz;
-  latest_completed_date date;
-  schedule_end date;
   today_uae date := (now() at time zone 'Asia/Dubai')::date;
 begin
-  insert into inspection_schedule_occurrences (
-    equipment_id,
-    scheduled_date,
-    status,
-    submission_id,
-    completed_at
-  )
-  select distinct on (s.equipment_id, s.inspection_date)
-    s.equipment_id,
-    s.inspection_date,
-    'completed',
-    s.id,
-    coalesce(s.submitted_at, now())
-  from form_submissions s
-  where s.equipment_id is not null
-    and exists (
-      select 1
-      from form_responses r
-      where r.submission_id = s.id
-    )
-  order by s.equipment_id, s.inspection_date, s.submitted_at desc
-  on conflict (equipment_id, scheduled_date) do update
-  set status = 'completed',
-      submission_id = excluded.submission_id,
-      completed_at = excluded.completed_at,
-      cancelled_at = null;
-
   for asset in
     select
       e.id,
@@ -57,36 +28,15 @@ begin
       and f.interval_days > 0
   loop
     due_date := asset.next_amc_date;
-    select max(s.inspection_date)
-    into latest_completed_date
-    from form_submissions s
-    where s.equipment_id = asset.id
-      and exists (
-        select 1
-        from form_responses r
-        where r.submission_id = s.id
-      );
-
-
-    period_start := coalesce(
-      asset.amc_date - 1,
-      due_date - asset.interval_days - 1
-    );
-    if latest_completed_date is not null
-      and latest_completed_date >= due_date - asset.interval_days then
-      period_start := latest_completed_date;
-    end if;
-
+    period_start := coalesce(asset.amc_date, due_date - asset.interval_days);
     due_date := period_start + asset.interval_days;
-    schedule_end := least(asset.next_amc_date, today_uae);
-
-    while due_date < schedule_end loop
-      submission_id := null;
+    loop
+      matched_submission_id := null;
       submission_date := null;
       submission_timestamp := null;
 
       select s.id, s.inspection_date, s.submitted_at
-      into submission_id, submission_date, submission_timestamp
+      into matched_submission_id, submission_date, submission_timestamp
       from form_submissions s
       where s.equipment_id = asset.id
         and s.inspection_date > period_start
@@ -99,22 +49,41 @@ begin
       order by s.inspection_date, s.submitted_at
       limit 1;
 
-      if submission_id is not null then
-        period_start := submission_date;
-        due_date := submission_date + asset.interval_days;
-      else
+      if matched_submission_id is not null then
+        delete from inspection_schedule_occurrences
+        where equipment_id = asset.id
+          and (scheduled_date = due_date or submission_id = matched_submission_id);
+
+        insert into inspection_schedule_occurrences (
+          equipment_id,
+          scheduled_date,
+          status,
+          submission_id,
+          completed_at
+        )
+        values (
+          asset.id,
+          due_date,
+          'completed',
+          matched_submission_id,
+          coalesce(submission_timestamp, now())
+        )
+        on conflict (equipment_id, scheduled_date) do update
+        set status = 'completed',
+            submission_id = excluded.submission_id,
+            completed_at = excluded.completed_at,
+            cancelled_at = null;
+
+        period_start := due_date;
+        due_date := due_date + asset.interval_days;
+      elsif due_date < today_uae then
         insert into inspection_schedule_occurrences (
           equipment_id,
           scheduled_date,
           status,
           cancelled_at
         )
-        values (
-          asset.id,
-          due_date,
-          'cancelled',
-          now()
-        )
+        values (asset.id, due_date, 'cancelled', now())
         on conflict (equipment_id, scheduled_date) do update
         set status = 'cancelled',
             cancelled_at = coalesce(inspection_schedule_occurrences.cancelled_at, excluded.cancelled_at)
@@ -122,6 +91,8 @@ begin
 
         period_start := due_date;
         due_date := due_date + asset.interval_days;
+      else
+        exit;
       end if;
     end loop;
 
@@ -132,13 +103,18 @@ begin
     )
     values (
       asset.id,
-      asset.next_amc_date,
+      due_date,
       'pending'
     )
     on conflict (equipment_id, scheduled_date) do update
     set status = 'pending',
         cancelled_at = null
     where inspection_schedule_occurrences.status <> 'completed';
+
+    update equipment
+    set next_amc_date = due_date
+    where id = asset.id
+      and next_amc_date is distinct from due_date;
 
   end loop;
 end;
