@@ -155,8 +155,9 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
   for (const occurrence of occurrences) {
     if (occurrence.status !== 'completed') continue;
     if (metricAssetIds && !metricAssetIds.has(occurrence.equipment_id)) continue;
-    if (fromDate && (!occurrence.scheduled_date || occurrence.scheduled_date < fromDate)) continue;
-    if (toDate && (!occurrence.scheduled_date || occurrence.scheduled_date > toDate)) continue;
+    const completedDate = occurrence.completed_at?.slice(0, 10);
+    if (fromDate && (!completedDate || completedDate < fromDate)) continue;
+    if (toDate && (!completedDate || completedDate > toDate)) continue;
     const asset = equipmentById.get(occurrence.equipment_id);
     if (!asset) continue;
     if (location !== 'all' && asset.locations?.site_code !== location) continue;
@@ -171,9 +172,7 @@ export default function SummaryReport({ submissions, equipment, frequencies, occ
     .map((asset) => {
       const schedule = expectedAssets.find((record) => equipmentLabel({ equipment: record }) === asset)
         ?? equipment?.find((record) => record.asset_id === asset);
-      const count = schedule && occurrencesByAsset.has(schedule.id)
-        ? completedCountByAsset.get(schedule.id) ?? 0
-        : filteredRows.filter((item) => equipmentLabel(item) === asset).length;
+      const count = schedule ? completedCountByAsset.get(schedule.id) ?? 0 : 0;
       const expected = expectedCount(schedule);
       return { asset, count, cancelled: expected === null ? '-' : cancellationCount(schedule) };
     })
