@@ -1,18 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import {
-  Container,
-  Button,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
-// import { deleteLocation } from "@/features/admin/commands";
-// import DeleteConfirmationButton from "../DeleteConfirmationButton";
+import { Container, Button, Stack, Typography } from "@mui/material";
 import LocationsList from "./LocationsList";
 
 export default async function LocationsPage() {
@@ -32,39 +19,6 @@ export default async function LocationsPage() {
         </Button>
       </Stack>
       <LocationsList locations={locations} />
-      {/* <Paper variant="outlined">
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Site</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Room/area</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {locations.map((location) => (
-              <TableRow key={location.id}>
-                <TableCell>{location.site_code}</TableCell>
-                <TableCell>{location.site_name ?? "-"}</TableCell>
-                <TableCell>{location.room_area}</TableCell>
-                <TableCell>
-                  <Button href={`/locations/${location.id}`}>Edit</Button>
-                  <form
-                    action={deleteLocation.bind(null, location.id)}
-                    style={{ display: "inline" }}
-                  >
-                    <DeleteConfirmationButton
-                      title="Delete location?"
-                      message="This will permanently delete this location. Asset or movement history may prevent deletion."
-                    />
-                  </form>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper> */}
     </Container>
   );
 }
