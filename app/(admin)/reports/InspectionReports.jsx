@@ -108,30 +108,63 @@ function MaintenanceHistoryDialog({ equipment }) {
   const history = equipment.maintenanceHistory ?? [];
   return (
     <>
-      <Button size="small" onClick={() => setOpen(true)} disabled={history.length === 0}>
+      <Button
+        size="small"
+        onClick={() => setOpen(true)}
+        disabled={history.length === 0}
+      >
         {history.length ? `View (${history.length})` : "No history"}
       </Button>
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="lg">
-        <DialogTitle>Maintenance History: {equipmentLabel(equipment)}</DialogTitle>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>
+          Maintenance History: {equipmentLabel(equipment)}
+        </DialogTitle>
         <DialogContent dividers>
           <Table>
-            <TableHead><TableRow>
-              <TableCell>Opened</TableCell><TableCell>Checklist Item</TableCell><TableCell>Issue</TableCell>
-              <TableCell>Status</TableCell><TableCell>Resolution Comment</TableCell><TableCell>Resolved</TableCell>
-            </TableRow></TableHead>
-            <TableBody>{history.map((issue) => (
-              <TableRow key={issue.id}>
-                <TableCell>{issue.opened_at?.slice(0, 10)}</TableCell>
-                <TableCell>{issue.form_responses?.form_fields?.label ?? "-"}</TableCell>
-                <TableCell>{issue.form_responses?.remarks ?? "-"}</TableCell>
-                <TableCell><Chip size="small" label={issue.status} color={issue.status === "resolved" ? "success" : "error"} /></TableCell>
-                <TableCell>{issue.resolution_comment ?? "-"}</TableCell>
-                <TableCell>{issue.status === "resolved" ? `${issue.resolved_at?.slice(0, 10) ?? "-"} by ${issue.resolverName ?? "-"}` : "-"}</TableCell>
+            <TableHead>
+              <TableRow>
+                <TableCell>Opened</TableCell>
+                <TableCell>Checklist Item</TableCell>
+                <TableCell>Issue</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Resolution Comment</TableCell>
+                <TableCell>Resolved</TableCell>
               </TableRow>
-            ))}</TableBody>
+            </TableHead>
+            <TableBody>
+              {history.map((issue) => (
+                <TableRow key={issue.id}>
+                  <TableCell>{issue.opened_at?.slice(0, 10)}</TableCell>
+                  <TableCell>
+                    {issue.form_responses?.form_fields?.label ?? "-"}
+                  </TableCell>
+                  <TableCell>{issue.form_responses?.remarks ?? "-"}</TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={issue.status}
+                      color={issue.status === "resolved" ? "success" : "error"}
+                    />
+                  </TableCell>
+                  <TableCell>{issue.resolution_comment ?? "-"}</TableCell>
+                  <TableCell>
+                    {issue.status === "resolved"
+                      ? `${issue.resolved_at?.slice(0, 10) ?? "-"} by ${issue.resolverName ?? "-"}`
+                      : "-"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
           </Table>
         </DialogContent>
-        <DialogActions><Button onClick={() => setOpen(false)}>Close</Button></DialogActions>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Close</Button>
+        </DialogActions>
       </Dialog>
     </>
   );
@@ -147,11 +180,11 @@ function ScheduleTable({ rows }) {
       <Table className="report-table" size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Asset</TableCell>
+            <TableCell>Asset ID</TableCell>
             <TableCell>Name</TableCell>
             <TableCell>Location</TableCell>
             <TableCell>Frequency</TableCell>
-            <TableCell>Next AMC</TableCell>
+            <TableCell>Next AMC Date</TableCell>
             <TableCell>Inspection History</TableCell>
             <TableCell>Maintenance History</TableCell>
             <TableCell>Status</TableCell>
@@ -168,7 +201,9 @@ function ScheduleTable({ rows }) {
               <TableCell>
                 <InspectionHistoryDialog equipment={item} />
               </TableCell>
-              <TableCell><MaintenanceHistoryDialog equipment={item} /></TableCell>
+              <TableCell>
+                <MaintenanceHistoryDialog equipment={item} />
+              </TableCell>
               <TableCell>
                 <Chip
                   size="small"
@@ -206,7 +241,7 @@ function CompletedTable({ rows, nokOnly = false }) {
         <TableHead>
           <TableRow>
             <TableCell>Date</TableCell>
-            <TableCell>Asset</TableCell>
+            <TableCell>Asset ID</TableCell>
             <TableCell>Template</TableCell>
             <TableCell>Technician</TableCell>
             <TableCell>Action</TableCell>
@@ -255,7 +290,9 @@ export default function InspectionReports({ reportData }) {
   const [toDate, setToDate] = useState("");
   const [summaryLocation, setSummaryLocation] = useState("all");
   const [summaryPeriod, setSummaryPeriod] = useState(
-    formatReportPeriod(reportData.completed.map((submission) => submission.inspection_date)),
+    formatReportPeriod(
+      reportData.completed.map((submission) => submission.inspection_date),
+    ),
   );
   const selectedRows =
     tab === "equipment"
@@ -353,12 +390,12 @@ export default function InspectionReports({ reportData }) {
               ),
             );
   const descriptionByTab = {
-    summary: "Summary of completed inspections and maintenance requirements.",
-    equipment: "Asset-wise AMC schedule, location, and inspection history.",
-    completed: "Completed inspection submissions across all assets.",
-    pending: "Assets with inspections due within the active schedule.",
-    overdue: "Assets with inspections past their scheduled AMC date.",
-    nok: "Inspection submissions containing N/OK checklist results.",
+    summary: "Summary of Completed Inspections and Maintenance Requirements.",
+    equipment: "Asset-wise AMC Schedule, Location, and Inspection History.",
+    completed: "Completed Inspection Submissions across all Assets.",
+    pending: "Assets with Inspections due within the active schedule.",
+    overdue: "Assets with Inspections past their scheduled AMC date.",
+    nok: "Inspection Submissions containing N/OK checklist results.",
   };
 
   return (
@@ -428,6 +465,7 @@ export default function InspectionReports({ reportData }) {
                 setPage(0);
               }}
               slotProps={{ inputLabel: { shrink: true } }}
+              sx={{ minWidth: 160 }}
             />
             <TextField
               type="date"
@@ -438,6 +476,7 @@ export default function InspectionReports({ reportData }) {
                 setPage(0);
               }}
               slotProps={{ inputLabel: { shrink: true } }}
+              sx={{ minWidth: 160 }}
             />
             {["equipment", "nok"].includes(tab) && (
               <TextField
@@ -450,7 +489,7 @@ export default function InspectionReports({ reportData }) {
                 }}
                 sx={{ minWidth: 220 }}
               >
-                <MenuItem value="all">All locations</MenuItem>
+                <MenuItem value="all">All Locations</MenuItem>
                 {locations.map((item) => (
                   <MenuItem key={item} value={item}>
                     {item}
@@ -469,7 +508,7 @@ export default function InspectionReports({ reportData }) {
                 }}
                 sx={{ minWidth: 160 }}
               >
-                <MenuItem value="all">All statuses</MenuItem>
+                <MenuItem value="all">All Statuses</MenuItem>
                 <MenuItem value="pending">Pending</MenuItem>
                 <MenuItem value="overdue">Overdue</MenuItem>
                 <MenuItem value="completed">Completed</MenuItem>
