@@ -430,7 +430,7 @@ export default function InspectionReports({ reportData }) {
         <Tab value="equipment" label="Asset wise" />
         <Tab value="completed" label="Completed" />
         <Tab value="pending" label="Pending" />
-        <Tab value="overdue" label="Overdue" />
+        {/* <Tab value="overdue" label="Overdue" /> */}
         <Tab value="nok" label="N/OK checklist" />
       </Tabs>
       {tab === "summary" && (

@@ -99,12 +99,14 @@ export default function SummaryReport({
   onLocationChange,
   onPeriodChange,
 }) {
-  const amcDates = (equipment ?? [])
-    .map((item) => item.amc_date)
-    .filter(Boolean)
-    .sort();
-  const [fromDate, setFromDate] = useState(amcDates[0] ?? "");
-  const [toDate, setToDate] = useState(amcDates[amcDates.length - 1] ?? "");
+  const todayDubai = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dubai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const [fromDate, setFromDate] = useState(`${todayDubai.slice(0, 7)}-01`);
+  const [toDate, setToDate] = useState(todayDubai);
   const [location, setLocation] = useState("all");
   const [type, setType] = useState("all");
   const [metric, setMetric] = useState("all");
@@ -166,18 +168,41 @@ export default function SummaryReport({
       item.interval_days,
     ]),
   );
-  const todayDubai = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dubai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+
   const occurrencesByAsset = new Map();
   for (const occurrence of occurrences) {
     const history = occurrencesByAsset.get(occurrence.equipment_id) ?? [];
     history.push(occurrence);
     occurrencesByAsset.set(occurrence.equipment_id, history);
   }
+  const equipmentById = new Map(
+    (equipment ?? []).map((item) => [item.id, item]),
+  );
+  const metricAssetIds =
+    metric === "all" || metric === "cancelled"
+      ? null
+      : new Set(
+          baseRows
+            .filter(
+              (item) => metric !== "requiring" || requiresMaintenance(item),
+            )
+            .map((item) => item.equipment_id ?? item.equipment?.id)
+            .filter(Boolean),
+        );
+  const cancelledOccurrences = occurrences.filter((occurrence) => {
+    const asset = equipmentById.get(occurrence.equipment_id);
+    return (
+      occurrence.status === "cancelled" &&
+      asset &&
+      (!metricAssetIds || metricAssetIds.has(occurrence.equipment_id)) &&
+      (!fromDate ||
+        (occurrence.scheduled_date && occurrence.scheduled_date >= fromDate)) &&
+      (!toDate ||
+        (occurrence.scheduled_date && occurrence.scheduled_date <= toDate)) &&
+      (location === "all" || asset.locations?.site_code === location) &&
+      (type === "all" || assetType({ equipment: asset }) === type)
+    );
+  });
   function expectedCount(asset, endDate = asset?.next_amc_date) {
     if (!asset?.amc_frequency || asset.amc_frequency.trim() === "-")
       return null;
@@ -221,26 +246,26 @@ export default function SummaryReport({
     return Math.max(1, Math.ceil(periodDays / intervalDays));
   }
   function cancellationCount(asset) {
-    const history = occurrencesByAsset.get(asset?.id);
-    if (history?.length)
-      return history.filter((item) => item.status === "cancelled").length;
-    if (!asset?.amc_date || asset.amc_date >= todayDubai) return 0;
-    const yesterday = new Date(`${todayDubai}T00:00:00Z`);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    return expectedCount(asset, yesterday.toISOString().slice(0, 10));
+    return cancelledOccurrences.filter(
+      (item) => item.equipment_id === asset?.id,
+    ).length;
   }
-  const cancelledRows = expectedAssets
-    .filter((item) => cancellationCount(item) > 0)
+  const cancelledRows = [
+    ...new Set(
+      cancelledOccurrences.map((occurrence) => occurrence.equipment_id),
+    ),
+  ]
+    .map((equipmentId) => equipmentById.get(equipmentId))
+    .filter(Boolean)
     .map((item) => ({ equipment: item, equipment_id: item.id }));
   const filteredRows =
     metric === "cancelled"
       ? cancelledRows
       : baseRows.filter((item) => {
           if (metric === "requiring") return requiresMaintenance(item);
-          if (metric === "without") return !requiresMaintenance(item);
           return true;
         });
-  const cardRows = metric === "cancelled" ? baseRows : filteredRows;
+  const cardRows = metric === "cancelled" ? [] : filteredRows;
   const completedAssetCount = new Set(
     cardRows
       .map((item) => item.equipment_id ?? item.equipment?.id)
@@ -249,15 +274,20 @@ export default function SummaryReport({
   const completedCountByAsset = new Map();
   for (const occurrence of occurrences) {
     if (occurrence.status !== "completed") continue;
+    if (metricAssetIds && !metricAssetIds.has(occurrence.equipment_id))
+      continue;
+    const completedDate = occurrence.completed_at?.slice(0, 10);
+    if (fromDate && (!completedDate || completedDate < fromDate)) continue;
+    if (toDate && (!completedDate || completedDate > toDate)) continue;
+    const asset = equipmentById.get(occurrence.equipment_id);
+    if (!asset) continue;
+    if (location !== "all" && asset.locations?.site_code !== location) continue;
+    if (type !== "all" && assetType({ equipment: asset }) !== type) continue;
     completedCountByAsset.set(
       occurrence.equipment_id,
       (completedCountByAsset.get(occurrence.equipment_id) ?? 0) + 1,
     );
   }
-  const cancelledCount = expectedAssets.reduce(
-    (total, asset) => total + (cancellationCount(asset) ?? 0),
-    0,
-  );
   const maintenanceRows = cardRows.filter(requiresMaintenance);
   const rowsForAssetSummary =
     metric === "all" || metric === "by_asset"
@@ -273,22 +303,32 @@ export default function SummaryReport({
     ...new Map(
       rowsForAssetSummary.map((item) => [equipmentLabel(item), 0]),
     ).keys(),
-  ].map((asset) => {
-    const schedule =
-      expectedAssets.find(
-        (record) => equipmentLabel({ equipment: record }) === asset,
-      ) ?? equipment?.find((record) => record.asset_id === asset);
-    const count =
-      schedule && occurrencesByAsset.has(schedule.id)
+  ]
+    .map((asset) => {
+      const schedule =
+        expectedAssets.find(
+          (record) => equipmentLabel({ equipment: record }) === asset,
+        ) ?? equipment?.find((record) => record.asset_id === asset);
+      const count = schedule
         ? (completedCountByAsset.get(schedule.id) ?? 0)
-        : filteredRows.filter((item) => equipmentLabel(item) === asset).length;
-    const expected = expectedCount(schedule);
-    return {
-      asset,
-      count,
-      cancelled: expected === null ? "-" : cancellationCount(schedule),
-    };
-  });
+        : 0;
+      const expected = expectedCount(schedule);
+      return {
+        asset,
+        count,
+        cancelled: expected === null ? "-" : cancellationCount(schedule),
+      };
+    })
+    .filter((item) => metric !== "by_asset" || item.count > 0);
+  const displayedCompletedCount = assetCounts.reduce(
+    (total, item) => total + item.count,
+    0,
+  );
+  const displayedCancelledCount = assetCounts.reduce(
+    (total, item) =>
+      total + (typeof item.cancelled === "number" ? item.cancelled : 0),
+    0,
+  );
   const sortedAssetCounts = useMemo(
     () =>
       [...assetCounts].sort((left, right) => {
@@ -469,14 +509,14 @@ export default function SummaryReport({
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <MetricCard
             label="Completed vs. Actual"
-            value={`${cardRows.length} / ${cardRows.length + cancelledCount}`}
+            value={`${cardRows.length} / ${cardRows.length + displayedCancelledCount}`}
             color="secondary"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <MetricCard
             label="Cancelled Inspections"
-            value={cancelledCount}
+            value={displayedCancelledCount}
             color="error"
           />
         </Grid>
