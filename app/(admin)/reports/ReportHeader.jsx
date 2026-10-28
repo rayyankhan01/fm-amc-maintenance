@@ -17,7 +17,7 @@ export function formatReportPeriod(dates) {
   return `${validDates[0]} to ${validDates[validDates.length - 1]}`;
 }
 
-export default function ReportHeader({ title, description, period, siteLocation = 'All sites / locations' }) {
+export default function ReportHeader({ title, description, period, siteLocation = 'All sites / locations', assetType, summaryMetric }) {
   const [generatedAt] = useState(() => new Date());
 
   return (
@@ -28,6 +28,8 @@ export default function ReportHeader({ title, description, period, siteLocation 
         <Typography variant="body2" color="text.secondary">{description}</Typography>
         <Typography variant="body2"><strong>Department:</strong> Facilities Management</Typography>
         <Typography variant="body2"><strong>Site/Location:</strong> {siteLocation}</Typography>
+        {assetType && <Typography variant="body2"><strong>Asset Type:</strong> {assetType}</Typography>}
+        {summaryMetric && <Typography variant="body2"><strong>Summary Metric:</strong> {summaryMetric}</Typography>}
         <Typography variant="body2"><strong>Report Period:</strong> {period}</Typography>
         <Typography variant="body2"><strong>Generate Date/Time:</strong> {formatDateTime(generatedAt)}</Typography>
       </Stack>

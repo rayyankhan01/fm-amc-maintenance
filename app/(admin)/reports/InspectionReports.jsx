@@ -289,6 +289,8 @@ export default function InspectionReports({ reportData }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [summaryLocation, setSummaryLocation] = useState("all");
+  const [summaryAssetType, setSummaryAssetType] = useState("All asset types");
+  const [summaryMetric, setSummaryMetric] = useState("All Completed Inspections");
   const [summaryPeriod, setSummaryPeriod] = useState(
     formatReportPeriod(
       reportData.completed.map((submission) => submission.inspection_date),
@@ -408,6 +410,8 @@ export default function InspectionReports({ reportData }) {
         }
         description={descriptionByTab[tab]}
         period={tab === "summary" ? summaryPeriod : period}
+        assetType={tab === "summary" ? summaryAssetType : undefined}
+        summaryMetric={tab === "summary" ? summaryMetric : undefined}
         siteLocation={
           tab === "summary"
             ? summaryLocation === "all"
@@ -441,6 +445,8 @@ export default function InspectionReports({ reportData }) {
           occurrences={reportData.occurrences}
           onLocationChange={setSummaryLocation}
           onPeriodChange={setSummaryPeriod}
+          onAssetTypeChange={setSummaryAssetType}
+          onMetricChange={setSummaryMetric}
         />
       )}
       {tab !== "summary" && (

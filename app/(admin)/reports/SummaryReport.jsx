@@ -98,6 +98,8 @@ export default function SummaryReport({
   occurrences = [],
   onLocationChange,
   onPeriodChange,
+  onAssetTypeChange,
+  onMetricChange,
 }) {
   const todayDubai = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Dubai",
@@ -125,6 +127,10 @@ export default function SummaryReport({
             : "No AMC dates available";
     onPeriodChange?.(period);
   }, [fromDate, onPeriodChange, toDate]);
+  useEffect(() => {
+    onAssetTypeChange?.(type === "all" ? "All asset types" : type);
+    onMetricChange?.(metricLabel(metric));
+  }, [type, metric, onAssetTypeChange, onMetricChange]);
   const locations = useMemo(
     () => [...new Set(submissions.map(siteCode).filter(Boolean))].sort(),
     [submissions],
