@@ -28,7 +28,7 @@ export default async function InspectionFormPage({ params }) {
   const { data: equipment, error: equipmentError } = await supabase
     .from("equipment")
     .select(
-      "id, equipment_type_code, equipment_type, unit_number, name, next_amc_date, locations ( site_code, room_area )",
+      "id, equipment_type_code, equipment_type,equipment_type_id, unit_number, name, next_amc_date, locations ( site_code, room_area )",
     )
     .eq("id", id)
     .single();
@@ -59,7 +59,7 @@ export default async function InspectionFormPage({ params }) {
 
   const template = await getTemplateForEquipmentType(
     supabase,
-    equipment.equipment_type,
+    equipment.equipment_type_id,
   );
 
   if (!template) {

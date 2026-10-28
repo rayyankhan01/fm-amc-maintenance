@@ -39,11 +39,11 @@ export async function getTemplateWithFields(supabase, templateId) {
  * @param {string} equipmentType
  * @returns {Promise<{ id: string, name: string, equipment_type: string } | null>}
  */
-export async function getTemplateForEquipmentType(supabase, equipmentType) {
+export async function getTemplateForEquipmentType(supabase, equipmentTypeId) {
   const { data, error } = await supabase
     .from("form_templates")
     .select("id, name, equipment_type")
-    .eq("equipment_type", equipmentType)
+    .eq("equipment_type_id", equipmentTypeId)
     .maybeSingle();
 
   if (error) throw error;
