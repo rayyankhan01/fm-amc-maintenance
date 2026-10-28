@@ -42,13 +42,14 @@ const sections = [
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
-  const { due, overdue, newAssets } = await getInspectionAlerts(supabase);
+  const { due, overdue, newAssets, cancelledAlerts } =
+    await getInspectionAlerts(supabase);
   const dashboardSections = [
     ...sections,
     {
       href: "/alerts",
       title: "Alerts and notifications",
-      description: `${due.length} due, ${overdue.length} overdue, and ${newAssets.length} new asset${newAssets.length === 1 ? "" : "s"}.`,
+      description: `${due.length} due, ${overdue.length} overdue, ${newAssets.length} new asset${newAssets.length === 1 ? "" : "s"}.\n${cancelledAlerts.length} cancelled inspection${cancelledAlerts.length === 1 ? "" : "s"}.`,
     },
   ];
 
@@ -89,7 +90,10 @@ export default async function AdminDashboardPage() {
               <Typography variant="h6" sx={{ mb: 1 }}>
                 {section.title}
               </Typography>
-              <Typography color="text.secondary">
+              <Typography
+                color="text.secondary"
+                sx={{ whiteSpace: "pre-line" }}
+              >
                 {section.description}
               </Typography>
             </Paper>

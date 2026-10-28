@@ -16,7 +16,7 @@ import { getInspectionAlerts } from "@/features/alerts/api";
 
 export default async function AlertsPage() {
   const supabase = await createClient();
-  const { alerts, due, overdue, newAssets } =
+  const { alerts, due, overdue, newAssets, cancelledAlerts } =
     await getInspectionAlerts(supabase);
 
   return (
@@ -31,13 +31,16 @@ export default async function AlertsPage() {
         </Stack>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <Alert severity="warning" sx={{ flex: 1 }}>
-            Due checklists: {due.length}
+            Due Checklists: {due.length}
           </Alert>
           <Alert severity="error" sx={{ flex: 1 }}>
-            Overdue checklists: {overdue.length}
+            Overdue Checklists: {overdue.length}
           </Alert>
           <Alert severity="info" sx={{ flex: 1 }}>
-            New assets: {newAssets.length}
+            New Assets: {newAssets.length}
+          </Alert>
+          <Alert color="secondary" sx={{ flex: 1 }}>
+            Cancelled Inspections: {cancelledAlerts.length}
           </Alert>
         </Stack>
         <Paper variant="outlined" sx={{ overflowX: "auto" }}>
@@ -46,12 +49,13 @@ export default async function AlertsPage() {
               <TableRow>
                 <TableCell>Status</TableCell>
                 <TableCell>Notification</TableCell>
-                <TableCell>Asset</TableCell>
-                <TableCell>Name</TableCell>
+                <TableCell>Asset ID</TableCell>
+                <TableCell>Asset Name</TableCell>
                 <TableCell>Location</TableCell>
                 <TableCell>Frequency</TableCell>
                 <TableCell>Next AMC</TableCell>
                 <TableCell>Last submitted</TableCell>
+                <TableCell>Reason</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -67,28 +71,49 @@ export default async function AlertsPage() {
                       color={
                         item.alertStatus === "overdue"
                           ? "error"
-                          : item.alertStatus === "new_asset"
-                            ? "info"
-                            : "warning"
+                          : item.alertStatus === "cancelled"
+                            ? "secondary"
+                            : item.alertStatus === "new_asset"
+                              ? "info"
+                              : "warning"
                       }
                       size="small"
                     />
+                  </TableCell>
+                  <TableCell>
+                    {item.alertStatus === "overdue"
+                      ? "Checklist is overdue"
+                      : item.alertStatus === "due"
+                        ? "Checklist is due"
+                        : item.alertStatus === "new_asset"
+                          ? "New asset added by technician"
+                          : item.alertStatus === "cancelled"
+                            ? "Technician cancelled this inspection"
+                            : "-"}
                   </TableCell>
                   <TableCell>{item.equipmentLabel}</TableCell>
                   <TableCell>{item.name ?? "-"}</TableCell>
                   <TableCell>{item.locationLabel}</TableCell>
                   <TableCell>{item.amc_frequency ?? "-"}</TableCell>
                   <TableCell>{item.next_amc_date}</TableCell>
+
                   <TableCell>
                     {item.alertStatus === "new_asset"
                       ? new Date(item.created_at).toLocaleDateString()
-                      : (item.latest?.inspection_date ?? "Never submitted")}
+                      : item.alertStatus === "cancelled"
+                        ? `Cancelled ${item.latest?.inspection_date}`
+                        : (item.latest?.inspection_date ?? "Never submitted")}
+                  </TableCell>
+                  <TableCell>
+                    {item.alertStatus === "cancelled"
+                      ? (item.latest?.cancellation_reason ?? "-")
+                      : "-"}
                   </TableCell>
                 </TableRow>
               ))}
               {alerts.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={9}>
                     No new assets or due/overdue checklists.
                   </TableCell>
                 </TableRow>

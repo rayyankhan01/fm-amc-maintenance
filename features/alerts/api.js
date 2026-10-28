@@ -27,7 +27,7 @@ export async function getInspectionAlerts(supabase) {
     supabase
       .from("form_submissions")
       .select(
-        "id, equipment_id, inspection_date, profiles(name), form_templates(name)",
+        "id, equipment_id, inspection_date, form_status, cancellation_reason, profiles(name), form_templates(name)",
       )
       .order("inspection_date", { ascending: false }),
   ]);
@@ -60,7 +60,9 @@ export async function getInspectionAlerts(supabase) {
       const latest = latestByEquipment.get(item.id) ?? null;
       if (!item.next_amc_date) return null;
       const isCompleted =
-        latest && latest.inspection_date >= item.next_amc_date;
+        latest &&
+        latest.form_status === "completed" &&
+        latest.inspection_date >= item.next_amc_date;
       if (isCompleted) return null;
 
       return {
@@ -85,12 +87,26 @@ export async function getInspectionAlerts(supabase) {
       locationLabel: locationLabel(item.locations),
       alertStatus: "new_asset",
     }));
-  const alerts = [...newAssets, ...scheduleAlerts];
 
+  const cancelledAlerts = (equipment ?? [])
+    .map((item) => {
+      const latest = latestByEquipment.get(item.id) ?? null;
+      if (!latest || latest.form_status !== "cancelled") return null;
+      return {
+        ...item,
+        equipmentLabel: equipmentLabel(item),
+        locationLabel: locationLabel(item.locations),
+        latest,
+        alertStatus: "cancelled",
+      };
+    })
+    .filter(Boolean);
+  const alerts = [...newAssets, ...scheduleAlerts, ...cancelledAlerts];
   return {
     alerts,
     due: scheduleAlerts.filter((item) => item.alertStatus === "due"),
     overdue: scheduleAlerts.filter((item) => item.alertStatus === "overdue"),
     newAssets,
+    cancelledAlerts,
   };
 }
