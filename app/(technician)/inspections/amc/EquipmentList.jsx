@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import { ExpandMore } from "@mui/icons-material";
 import { useMemo, useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 /**
  * @param {{ equipment: Array<{
@@ -38,7 +39,7 @@ function getAssetId(item) {
     `${item.locations?.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`
   );
 }
-function renderEquipmentList(items) {
+function renderEquipmentList(items, chipLabel, cancelledDates) {
   if (items.length === 0) {
     return <Typography>No equipment found</Typography>;
   }
@@ -58,7 +59,16 @@ function renderEquipmentList(items) {
                 primary={item.name ?? item.equipment_type}
                 secondary={`${assetId}· ${item.locations?.room_area ? `Room ${item.locations.room_area}` : ""}`}
               />
-              <Chip label="Inspect" size="small" color="primary" />
+              <Stack spacing={1}>
+                <Chip label={chipLabel} size="small" color="primary" />
+                {cancelledDates.has(item.id) && (
+                  <Chip
+                    label={`Cancelled - ${new Date(cancelledDates.get(item.id)).toLocaleDateString()}`}
+                    size="small"
+                    color="warning"
+                  ></Chip>
+                )}
+              </Stack>
             </ListItemButton>
           );
         })}
@@ -70,13 +80,36 @@ function renderEquipmentList(items) {
 export default function EquipmentList({
   equipment,
   equipmentTypes,
-  submissions,
+  completedIds,
+  cancelledDates,
   locations,
 }) {
-  const [selectedTypeId, setSelectedTypeId] = useState("");
-  const [searchText, setSearchText] = useState("");
-  const [selectedLocationId, setSelectedLocationId] = useState("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [selectedTypeId, setSelectedTypeId] = useState(
+    searchParams.get("type") ?? "",
+  );
+  const [searchText, setSearchText] = useState(
+    searchParams.get("search") ?? "",
+  );
+  const [selectedLocationId, setSelectedLocationId] = useState(
+    searchParams.get("location") ?? "",
+  );
   const [pendingExpanded, setPendingExpanded] = useState(true);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (selectedTypeId) params.set("type", selectedTypeId);
+    if (searchText) params.set("search", searchText);
+    if (selectedLocationId) params.set("location", selectedLocationId);
+
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchText, selectedTypeId, selectedLocationId]);
+  useEffect(() => {
+    router.refresh();
+  }, []);
   const [submittedExpanded, setSubmittedExpanded] = useState(false);
   useEffect(() => {
     if (searchText.trim() || selectedTypeId || selectedLocationId) {
@@ -111,12 +144,14 @@ export default function EquipmentList({
   //filtering though the equipments to see whether the
   //submissions table has a entry with the matching equipment id
   const pendingEquipment = filteredEquipment.filter((item) => {
-    if (item.next_amc_date) return item.next_amc_date <= today;
-    return !submissions.has(item.id);
+    if (item.next_amc_date)
+      return item.next_amc_date <= today || !completedIds.has(item.id);
+    return !completedIds.has(item.id);
   });
   const submittedEquipment = filteredEquipment.filter((item) => {
-    if (item.next_amc_date) return item.next_amc_date > today;
-    return submissions.has(item.id);
+    if (item.next_amc_date)
+      return item.next_amc_date > today && completedIds.has(item.id);
+    return completedIds.has(item.id);
   });
   if (equipment.length === 0) {
     return (
@@ -135,7 +170,9 @@ export default function EquipmentList({
             label="Asset Type"
             value={selectedTypeId}
             fullWidth
-            onChange={(e) => setSelectedTypeId(e.target.value)}
+            onChange={(e) => {
+              setSelectedTypeId(e.target.value);
+            }}
           >
             <MenuItem value="">All Types</MenuItem>
             {equipmentTypes.map((type) => (
@@ -149,7 +186,9 @@ export default function EquipmentList({
             label="Location"
             value={selectedLocationId}
             fullWidth
-            onChange={(e) => setSelectedLocationId(e.target.value)}
+            onChange={(e) => {
+              setSelectedLocationId(e.target.value);
+            }}
           >
             <MenuItem value="">All Locations</MenuItem>
             {locations.map((loc) => (
@@ -181,7 +220,7 @@ export default function EquipmentList({
           </Typography>
         </AccordionSummary>
         <AccordionDetails>
-          {renderEquipmentList(pendingEquipment)}
+          {renderEquipmentList(pendingEquipment, "Inspect", cancelledDates)}
         </AccordionDetails>
       </Accordion>
       <Accordion
@@ -194,7 +233,7 @@ export default function EquipmentList({
           </Typography>
         </AccordionSummary>
         <AccordionDetails>
-          {renderEquipmentList(submittedEquipment)}
+          {renderEquipmentList(submittedEquipment, "View", cancelledDates)}
         </AccordionDetails>
       </Accordion>
     </>

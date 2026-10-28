@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import EquipmentList from "./EquipmentList";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 import Link from "next/link";
+
 export default async function InspectionsPage() {
   const supabase = await createClient();
 
@@ -21,16 +22,31 @@ export default async function InspectionsPage() {
     supabase.from("equipment_types").select("id, code ,name").order("name"),
     supabase
       .from("form_submissions")
-      .select("equipment_id")
-      .order("submitted_at"),
+      .select("equipment_id, form_status, submitted_at")
+      .order("submitted_at", { ascending: false }),
     supabase
       .from("locations")
       .select("id,site_code,site_name")
       .order("site_code"),
   ]);
-  const submittedIds = new Set(
-    submissions?.map((row) => row.equipment_id) ?? [],
-  );
+  const latestByEquipment = new Map();
+  for (const row of submissions ?? []) {
+    if (!latestByEquipment.has(row.equipment_id)) {
+      latestByEquipment.set(row.equipment_id, row);
+    }
+  }
+  const completedIds = new Set();
+  for (const [equipmentId, row] of latestByEquipment) {
+    if (row.form_status === "completed") {
+      completedIds.add(equipmentId);
+    }
+  }
+  const cancelledDates = new Map();
+  for (const [equipmentId, row] of latestByEquipment) {
+    if (row.form_status === "cancelled") {
+      cancelledDates.set(equipmentId, row.submitted_at);
+    }
+  }
 
   const uniqueSites = new Map();
   for (const row of locations ?? []) {
@@ -85,7 +101,8 @@ export default async function InspectionsPage() {
       <EquipmentList
         equipment={equipment}
         equipmentTypes={equipmentTypes}
-        submissions={submittedIds}
+        completedIds={completedIds}
+        cancelledDates={cancelledDates}
         locations={sites}
       />
     </Container>
