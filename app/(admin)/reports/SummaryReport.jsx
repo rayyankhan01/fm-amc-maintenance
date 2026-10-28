@@ -86,7 +86,7 @@ function metricLabel(value) {
       by_asset: "Completed Inspections by Asset",
       requiring: "Inspections Requiring Maintenance",
       without: "Inspections Not Requiring Maintenance",
-      cancelled: "Cancelled Inspections",
+      cancelled: "Missed Inspection",
     }[value] ?? value
   );
 }
@@ -485,7 +485,7 @@ export default function SummaryReport({
           <MenuItem value="without">
             Inspections Not Requiring Maintenance
           </MenuItem>
-          <MenuItem value="cancelled">Cancelled Inspections</MenuItem>
+          <MenuItem value="cancelled">Missed Inspection</MenuItem>
         </TextField>
       </Stack>
       <Stack
@@ -501,7 +501,7 @@ export default function SummaryReport({
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <MetricCard
-            label="Completed Inspections"
+            label="Total Completed Inspections"
             value={cardRows.length}
             color="primary"
           />
@@ -515,34 +515,34 @@ export default function SummaryReport({
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <MetricCard
-            label="Cancelled Inspections"
+            label="Missed Inspection"
             value={displayedCancelledCount}
             color="error"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <MetricCard
-            label="Assets Inspected"
+            label="Total Assets Inspected"
             value={completedAssetCount}
             color="info"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <MetricCard
-            label="Requiring Maintenance"
+            label="Inspections Requiring Maintenance"
             value={maintenanceRows.length}
             color="warning"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <MetricCard
-            label="Without Maintenance"
+            label="Inspections Not Requiring Maintenance"
             value={cardRows.length - maintenanceRows.length}
             color="success"
           />
         </Grid>
       </Grid>
-      <Stack
+      {/* <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={{ xs: 0.5, sm: 3 }}
       >
@@ -553,8 +553,8 @@ export default function SummaryReport({
         <Typography variant="body2">
           <strong>Summary Metric:</strong> {metricLabel(metric)}
         </Typography>
-      </Stack>
-      <Paper
+      </Stack> */}
+      {/* <Paper
         className="report-table-paper"
         variant="outlined"
         sx={{ overflowX: "auto" }}
@@ -570,7 +570,7 @@ export default function SummaryReport({
                 ["amcDate", "AMC Date"],
                 ["nextAmc", "Next AMC Date"],
                 ["count", "Completed Inspections"],
-                ["cancelled", "Cancelled Inspections"],
+                ["cancelled", "Missed Inspection"],
               ].map(([column, label]) => (
                 <TableCell
                   key={column}
@@ -643,7 +643,7 @@ export default function SummaryReport({
           }}
           rowsPerPageOptions={[10, 25, 50]}
         />
-      </Paper>
+      </Paper> */}
     </Stack>
   );
 }
