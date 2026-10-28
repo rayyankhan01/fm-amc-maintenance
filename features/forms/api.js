@@ -132,7 +132,9 @@ export async function submitInspection(supabase, input) {
       const intervalDays = frequency.interval_days;
       const scheduledOccurrences = [];
       if (equipment.next_amc_date || equipment.amc_date) {
-        const scheduledDate = new Date(`${equipment.next_amc_date ?? equipment.amc_date}T00:00:00Z`);
+        const scheduledDate = new Date(
+          `${equipment.next_amc_date ?? equipment.amc_date}T00:00:00Z`,
+        );
         const inspectionDate = new Date(`${inspection_date}T00:00:00Z`);
         while (scheduledDate < inspectionDate) {
           scheduledOccurrences.push({
@@ -154,12 +156,17 @@ export async function submitInspection(supabase, input) {
       if (scheduledOccurrences.length > 0) {
         const { error: cancelledOccurrenceError } = await supabase
           .from("inspection_schedule_occurrences")
-          .upsert(scheduledOccurrences, { onConflict: "equipment_id,scheduled_date", ignoreDuplicates: true });
+          .upsert(scheduledOccurrences, {
+            onConflict: "equipment_id,scheduled_date",
+            ignoreDuplicates: true,
+          });
         if (cancelledOccurrenceError) throw cancelledOccurrenceError;
       }
       const { error: occurrenceError } = await supabase
         .from("inspection_schedule_occurrences")
-        .upsert(currentOccurrence, { onConflict: "equipment_id,scheduled_date" });
+        .upsert(currentOccurrence, {
+          onConflict: "equipment_id,scheduled_date",
+        });
       if (occurrenceError) throw occurrenceError;
 
       const nextDate = new Date(`${inspection_date}T00:00:00Z`);
@@ -316,4 +323,34 @@ export async function resolveMaintenanceIssue(
     .eq("id", issueId);
 
   if (error) throw error;
+}
+
+export async function cancelInspection(
+  supabase,
+  {
+    equipment_id,
+    technician_id,
+    template_id,
+    inspection_date,
+    technician_signature,
+    cancellation_reason,
+  },
+) {
+  const { data: submission, error: submissionError } = await supabase
+    .from("form_submissions")
+    .insert({
+      equipment_id,
+      technician_id,
+      template_id,
+      inspection_date,
+      technician_signature,
+      form_status: "cancelled",
+      cancellation_reason,
+    })
+    .select("id")
+    .single();
+
+  if (submissionError) throw submissionError;
+
+  return submission.id;
 }

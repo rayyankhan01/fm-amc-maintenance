@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { submitInspection } from "../api";
+import { submitInspection, cancelInspection } from "../api";
 import ChecklistItemField from "./ChecklistItemField";
 import SignaturePad from "./SignaturePad";
 import {
@@ -14,6 +14,10 @@ import {
   Alert,
   Button,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 
 /**
@@ -38,6 +42,12 @@ export default function ChecklistForm({
   const [signature, setSignature] = useState(null);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  // for cancelled inspection dialog
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelSignature, setCancelSignature] = useState(null);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [cancelError, setCancelError] = useState(null);
 
   const sections = useMemo(() => {
     const headerFields = template.fields.filter(
@@ -133,6 +143,39 @@ export default function ChecklistForm({
     }
   }
 
+  async function handleCancel(e) {
+    e.preventDefault();
+
+    if (!cancelReason.trim()) {
+      setCancelError("A reason is required to cancel this inspection.");
+      return;
+    }
+    if (!cancelSignature) {
+      setCancelError("Please sign to verify cancellation of inspection.");
+      return;
+    }
+    setCancelError(null);
+    setCancelSubmitting(true);
+    try {
+      const supabase = createClient();
+
+      await cancelInspection(supabase, {
+        template_id: template.id,
+        equipment_id: equipment.id,
+        technician_id: technician?.id,
+        inspection_date: new Date().toISOString().slice(0, 10),
+        technician_signature: cancelSignature,
+        cancellation_reason: cancelReason.trim(),
+      });
+
+      router.push("/inspections/amc");
+      router.refresh();
+    } catch (submitError) {
+      setCancelError(submitError.message ?? "Failed to submit cancellation.");
+      setCancelSubmitting(false);
+    }
+  }
+
   return (
     <Box component="form" onSubmit={handleSubmit}>
       <Typography variant="h5">{template.name}</Typography>
@@ -202,6 +245,47 @@ export default function ChecklistForm({
         </Alert>
       )}
 
+      <Button
+        type="button"
+        variant="outlined"
+        fullWidth
+        color="error"
+        onClick={() => setCancelOpen(true)}
+        sx={{ mb: { xs: 2, md: 4 } }}
+      >
+        Cancel Inspection
+      </Button>
+      <Dialog open={cancelOpen} onClose={() => setCancelOpen(false)}>
+        <DialogTitle sx={{ pb: 2 }}>Cancel Asset Inspection</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            <TextField
+              label="Reason for cancellation."
+              variant="filled"
+              required
+              multiline
+              fullWidth
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+            <SignaturePad onChange={setCancelSignature} />
+            {cancelError && <Alert severity="error">{cancelError}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button type="button" onClick={() => setCancelOpen(false)}>
+            Close
+          </Button>
+          <Button
+            type="button"
+            variant="contained"
+            disabled={cancelSubmitting}
+            onClick={handleCancel}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Button type="submit" variant="contained" fullWidth disabled={submitting}>
         {submitting ? "Submitting..." : "Submit Inspection"}
       </Button>
