@@ -3,17 +3,14 @@ import {
   Container,
   Button,
   Chip,
-  Paper,
   Stack,
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
   TableRow,
   Typography,
 } from "@mui/material";
 import { deleteAdminEquipment } from "@/features/admin/commands";
 import DeleteConfirmationButton from "../DeleteConfirmationButton";
+import AdminList from "../AdminList";
 
 export default async function AdminEquipmentPage() {
   const supabase = await createClient();
@@ -32,27 +29,18 @@ export default async function AdminEquipmentPage() {
           Add Asset
         </Button>
       </Stack>
-      <Paper variant="outlined" sx={{ overflowX: "auto" }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Asset ID</TableCell>
-              <TableCell>Asset name</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Asset type</TableCell>
-              <TableCell>Site name</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Room/area</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>AMC frequency</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {equipment.map((item) => {
+        <AdminList
+          columns={["Asset ID", "Asset name", "Category", "Asset type", "Site name", "Location", "Room/area", "Status", "AMC frequency", "Actions"]}
+          searchLabel="Search assets"
+          filters={[{ key: "category", label: "Category" }, { key: "site", label: "Site" }, { key: "status", label: "Status" }]}
+          rows={equipment.map((item) => {
               const location = item.locations ?? {};
-              return (
-                <TableRow key={item.id}>
+                const assetId = item.asset_id ?? `${location.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`;
+                return {
+                  id: item.id,
+                  searchText: [assetId, item.name, item.equipment_types?.name, item.equipment_type, item.equipment_types?.code, location.site_code, location.site_name, location.room_area, item.status, item.amc_frequency].filter(Boolean).join(" "),
+                  filters: { category: item.equipment_types?.name, site: location.site_code, status: item.status },
+                  content: <TableRow key={item.id}>
                   <TableCell>
                     {item.asset_id ??
                       `${location.site_code ?? "?"}/${item.equipment_type_code}/${item.unit_number}`}
@@ -81,12 +69,10 @@ export default async function AdminEquipmentPage() {
                       />
                     </form>
                   </TableCell>
-                </TableRow>
-              );
+                </TableRow>,
+              };
             })}
-          </TableBody>
-        </Table>
-      </Paper>
+      />
     </Container>
   );
 }

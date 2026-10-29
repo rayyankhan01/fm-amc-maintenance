@@ -2,12 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import {
   Container,
   Button,
-  Paper,
   Stack,
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
   TableRow,
   Typography,
 } from "@mui/material";
@@ -16,6 +12,7 @@ import {
   deleteEquipmentType,
 } from "@/features/admin/commands";
 import DeleteConfirmationButton from "../DeleteConfirmationButton";
+import AdminList from "../AdminList";
 
 export default async function EquipmentTypesPage() {
   const { data, error } = await (await createClient())
@@ -31,19 +28,15 @@ export default async function EquipmentTypesPage() {
           Add Asset Type
         </Button>
       </Stack>
-      <Paper variant="outlined">
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Code</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Active</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((item) => (
-              <TableRow key={item.id}>
+        <AdminList
+          columns={["Code", "Name", "Active", "Actions"]}
+          searchLabel="Search asset types"
+          filters={[{ key: "active", label: "Status" }]}
+          rows={data.map((item) => ({
+            id: item.id,
+            searchText: [item.code, item.name].filter(Boolean).join(" "),
+            filters: { active: item.is_active ? "Active" : "Inactive" },
+            content: <TableRow key={item.id}>
                 <TableCell>{item.code}</TableCell>
                 <TableCell>{item.name}</TableCell>
                 <TableCell>{item.is_active ? "Yes" : "No"}</TableCell>
@@ -71,11 +64,9 @@ export default async function EquipmentTypesPage() {
                     </form>
                   )}
                 </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
+              </TableRow>,
+        }))}
+      />
     </Container>
   );
 }
