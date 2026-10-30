@@ -2,12 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Paper,
-  Table,
-  TableHead,
   TableRow,
   TableCell,
-  TableBody,
   Button,
   Box,
 } from "@mui/material";
@@ -16,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { deleteTemplate } from "@/features/forms/api";
 import IconButton from "@mui/material/IconButton";
 import DeleteSharpIcon from "@mui/icons-material/DeleteSharp";
+import AdminList from "../AdminList";
 
 export default function TemplatesList({ templates }) {
   const router = useRouter();
@@ -53,19 +50,15 @@ export default function TemplatesList({ templates }) {
         </Button>
       </Box>
 
-      <Paper variant="outlined">
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Asset</TableCell>
-              <TableCell>Fields</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {templates.map((template) => (
-              <TableRow
+      <AdminList
+        columns={["Name", "Asset", "Fields", "Actions"]}
+        searchLabel="Search templates"
+        filters={[{ key: "assetType", label: "Asset type" }]}
+        rows={templates.map((template) => ({
+          id: template.id,
+          searchText: [template.name, template.equipment_types?.code, template.equipment_types?.name].filter(Boolean).join(" "),
+          filters: { assetType: template.equipment_types?.name ?? template.equipment_types?.code },
+          content: <TableRow
                 key={template.id}
                 onClick={() => router.push(`/templates/${template.id}`)}
                 sx={{ cursor: "pointer", textDecoration: "none" }}
@@ -83,11 +76,9 @@ export default function TemplatesList({ templates }) {
                     <DeleteSharpIcon />
                   </IconButton>
                 </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
+              </TableRow>,
+        }))}
+      />
     </>
   );
 }

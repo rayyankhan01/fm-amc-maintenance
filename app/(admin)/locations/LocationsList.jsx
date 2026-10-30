@@ -11,16 +11,13 @@ import {
   DialogContentText,
   DialogTitle,
   MenuItem,
-  Paper,
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
   TableRow,
   TextField,
   Typography,
 } from "@mui/material";
 import { deleteLocation } from "@/features/admin/commands";
+import AdminList from "../AdminList";
 
 export default function LocationsList({ locations }) {
   const router = useRouter();
@@ -85,19 +82,14 @@ export default function LocationsList({ locations }) {
           Select a site to view its rooms.
         </Typography>
       ) : (
-        <Paper variant="outlined">
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Site</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Room/area</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredLocations.map((location) => (
-                <TableRow key={location.id}>
+        <AdminList
+          key={selectedSiteCode}
+          columns={["Site", "Name", "Room/area", "Actions"]}
+          searchLabel="Search locations"
+          rows={filteredLocations.map((location) => ({
+            id: location.id,
+            searchText: [location.site_code, location.site_name, location.room_area].filter(Boolean).join(" "),
+            content: <TableRow key={location.id}>
                   <TableCell>{location.site_code}</TableCell>
                   <TableCell>{location.site_name ?? "-"}</TableCell>
                   <TableCell>{location.room_area}</TableCell>
@@ -110,18 +102,9 @@ export default function LocationsList({ locations }) {
                       Delete
                     </Button>
                   </TableCell>
-                </TableRow>
-              ))}
-              {filteredLocations.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4}>
-                    No rooms found for this site.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Paper>
+                </TableRow>,
+          }))}
+        />
       )}
 
       <Dialog
