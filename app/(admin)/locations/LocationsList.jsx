@@ -45,11 +45,15 @@ export default function LocationsList({ locations }) {
   async function handleConfirmDelete() {
     setDeleting(true);
     try {
-      await deleteLocation(confirmTarget.id);
+      const result = await deleteLocation(confirmTarget.id);
       setConfirmTarget(null);
+      if (result.error) {
+        setDeleteError(result.error);
+        return;
+      }
       router.refresh();
-    } catch (error) {
-      setDeleteError(error.message ?? "Failed to delete location.");
+    } catch {
+      setDeleteError("Could not delete this location. Please try again.");
       setConfirmTarget(null);
     } finally {
       setDeleting(false);
