@@ -1,125 +1,132 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { addFormField } from "@/features/forms/api";
-import { Alert, Checkbox, FormControlLabel, MenuItem, TextField, Box, Stack, Button } from "@mui/material";
-
-
+import {
+  Alert,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  TextField,
+  Box,
+  Stack,
+  Button,
+} from "@mui/material";
 
 const FIELD_TYPES = [
-  { value: 'checklist_item', label: 'Checklist Item (OK/N_OK/N_A)' },
-  { value: 'text', label: 'Text' },
-  { value: 'date', label: 'Date' },
-  { value: 'select', label: 'Select' },
+  { value: "checklist_item", label: "Checklist Item (OK/N_OK/N_A)" },
+  { value: "text", label: "Text" },
+  { value: "date", label: "Date" },
+  { value: "select", label: "Select" },
+  { value: "image", label: "Image Upload" },
 ];
 
 /**
  * @param {{ templateId: string, fields: Array<{ sort_order: number }> }} props
  */
-export default function AddFieldForm({templateId, fields}){
-    const router = useRouter()
-    const [fieldType, setFieldType] = useState('checklist_item');
-    const [section, setSection] = useState('');
-    const [label, setLabel] = useState('');
-    const [isMandatory, setIsMandatory] = useState(true);
-    const [error, setError] = useState(null);
-    const [submitting, setSubmitting] = useState(false);
+export default function AddFieldForm({ templateId, fields }) {
+  const router = useRouter();
+  const [fieldType, setFieldType] = useState("checklist_item");
+  const [section, setSection] = useState("");
+  const [label, setLabel] = useState("");
+  const [isMandatory, setIsMandatory] = useState(true);
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-    async function handleSubmit(e){
-        e.preventDefault()
-        setError(null)
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError(null);
 
-        if(!label.trim()){
-            setError('Label is required.')
-            return;
-        }
-
-        const duplicate = fields.some((field) =>
-            field.field_type === fieldType &&
-            (field.section ?? '').trim().toLowerCase() === section.trim().toLowerCase() &&
-            field.label.trim().toLowerCase() === label.trim().toLowerCase()
-        );
-        if (duplicate) {
-            setError('A field with the same section, type, and label already exists.')
-            return;
-        }
-
-        const nextSortOrder=
-            fields.length > 0 ? Math.max(...fields.map((f) => f.sort_order)) + 1 : 1;
-
-
-        setSubmitting(true);
-        try{
-            const supabase = createClient();
-            await addFormField(supabase,
-                {
-                    template_id:templateId,
-                    field_type:fieldType,
-                    section:section.trim()||null,
-                    label:label.trim(),
-                    sort_order:nextSortOrder,
-                    is_mandatory:isMandatory
-                }
-            );
-            setLabel('');
-            router.refresh()
-        }catch(submitError){
-            setError(submitError.message ?? 'Failed to add field.');
-        }finally{
-            setSubmitting(false);
-        }
+    if (!label.trim()) {
+      setError("Label is required.");
+      return;
     }
 
-    return(
-        <Box component='form' onSubmit={handleSubmit}>
-            <Stack spacing={2}>
-                <TextField
-                select
-                label='Field Type'
-                value = {fieldType}
-                onChange = {(e)=>setFieldType(e.target.value)}
-                >
-                    {FIELD_TYPES.map((t)=>(
-                        <MenuItem key = {t.value} value={t.value}>
-                            {t.label}
-                        </MenuItem>
-                    ))}
-                </TextField>
+    const duplicate = fields.some(
+      (field) =>
+        field.field_type === fieldType &&
+        (field.section ?? "").trim().toLowerCase() ===
+          section.trim().toLowerCase() &&
+        field.label.trim().toLowerCase() === label.trim().toLowerCase(),
+    );
+    if (duplicate) {
+      setError(
+        "A field with the same section, type, and label already exists.",
+      );
+      return;
+    }
 
-                <TextField
-                label='Section'
-                helperText="Optional - groups checklist items, e.g. 'Condensing Unit'"
-                value = {section}
-                onChange={(e)=> setSection(e.target.value)}
-                />
+    const nextSortOrder =
+      fields.length > 0 ? Math.max(...fields.map((f) => f.sort_order)) + 1 : 1;
 
-                <TextField
-                label ='Label'
-                required
-                value={label}
-                onChange={(e)=>setLabel(e.target.value)}
-                />
+    setSubmitting(true);
+    try {
+      const supabase = createClient();
+      await addFormField(supabase, {
+        template_id: templateId,
+        field_type: fieldType,
+        section: section.trim() || null,
+        label: label.trim(),
+        sort_order: nextSortOrder,
+        is_mandatory: isMandatory,
+      });
+      setLabel("");
+      router.refresh();
+    } catch (submitError) {
+      setError(submitError.message ?? "Failed to add field.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
-                <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked ={isMandatory}
-                            onChange={(e)=> setIsMandatory(e.target.checked)}
-                        
-                        
-                        />
-                    }
-                label = 'Mandatory'
-                />
+  return (
+    <Box component="form" onSubmit={handleSubmit}>
+      <Stack spacing={2}>
+        <TextField
+          select
+          label="Field Type"
+          value={fieldType}
+          onChange={(e) => setFieldType(e.target.value)}
+        >
+          {FIELD_TYPES.map((t) => (
+            <MenuItem key={t.value} value={t.value}>
+              {t.label}
+            </MenuItem>
+          ))}
+        </TextField>
 
-                {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          label="Section"
+          helperText="Optional - groups checklist items, e.g. 'Condensing Unit'"
+          value={section}
+          onChange={(e) => setSection(e.target.value)}
+        />
 
-                <Button type ="submit" variant ='contained' disabled={submitting}>
-                    {submitting ? 'Adding...':'Add Field'}
-                </Button>
-            </Stack>
-        </Box>
-    )
+        <TextField
+          label="Label"
+          required
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
+
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={isMandatory}
+              onChange={(e) => setIsMandatory(e.target.checked)}
+            />
+          }
+          label="Mandatory"
+        />
+
+        {error && <Alert severity="error">{error}</Alert>}
+
+        <Button type="submit" variant="contained" disabled={submitting}>
+          {submitting ? "Adding..." : "Add Field"}
+        </Button>
+      </Stack>
+    </Box>
+  );
 }

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { submitInspection, cancelInspection } from "../api";
 import ChecklistItemField from "./ChecklistItemField";
 import SignaturePad from "./SignaturePad";
+import ImageUploadField from "./ImageUploadField";
 import {
   Box,
   Typography,
@@ -51,14 +52,14 @@ export default function ChecklistForm({
 
   const sections = useMemo(() => {
     const headerFields = template.fields.filter(
-      (f) => f.field_type !== "checklist_item",
+      (f) => f.field_type !== "checklist_item" && f.field_type !== "image",
     );
-    const checklistFields = template.fields.filter(
-      (f) => f.field_type === "checklist_item",
+    const sectionableFields = template.fields.filter(
+      (f) => f.field_type === "checklist_item" || f.field_type === "image",
     );
 
     const grouped = [];
-    for (const field of checklistFields) {
+    for (const field of sectionableFields) {
       const section = field.section?.trim() || "Inspection checklist";
       const last = grouped[grouped.length - 1];
       if (last && last.section === section) {
@@ -187,24 +188,31 @@ export default function ChecklistForm({
       {sections.headerFields.length > 0 && (
         <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
           <Stack spacing={2}>
-            {sections.headerFields.map((field) => (
-              <TextField
-                key={field.id}
-                label={field.label}
-                required={field.is_mandatory}
-                type={field.field_type === "date" ? "date" : "text"}
-                value={answers[field.id]?.value ?? ""}
-                onChange={(e) =>
-                  updateAnswer(field.id, { value: e.target.value })
-                }
-                fullWidth
-                slotProps={
-                  field.field_type === "date"
-                    ? { inputLabel: { shrink: true } }
-                    : undefined
-                }
-              />
-            ))}
+            {sections.headerFields.map((field) =>
+              field.field_type === "image" ? (
+                <ImageUploadField
+                  key={field.id}
+                  onChange={(url) => updateAnswer(field.id, { value: url })}
+                />
+              ) : (
+                <TextField
+                  key={field.id}
+                  label={field.label}
+                  required={field.is_mandatory}
+                  type={field.field_type === "date" ? "date" : "text"}
+                  value={answers[field.id]?.value ?? ""}
+                  onChange={(e) =>
+                    updateAnswer(field.id, { value: e.target.value })
+                  }
+                  fullWidth
+                  slotProps={
+                    field.field_type === "date"
+                      ? { inputLabel: { shrink: true } }
+                      : undefined
+                  }
+                />
+              ),
+            )}
           </Stack>
         </Paper>
       )}
@@ -218,14 +226,22 @@ export default function ChecklistForm({
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
             {group.section}
           </Typography>
-          {group.fields.map((field) => (
-            <ChecklistItemField
-              key={field.id}
-              field={field}
-              value={answers[field.id]}
-              onChange={(next) => updateAnswer(field.id, next)}
-            />
-          ))}
+          {group.fields.map((field) =>
+            field.field_type === "image" ? (
+              <ImageUploadField
+                key={field.id}
+                label={field.label}
+                onChange={(url) => updateAnswer(field.id, { value: url })}
+              />
+            ) : (
+              <ChecklistItemField
+                key={field.id}
+                field={field}
+                value={answers[field.id]}
+                onChange={(next) => updateAnswer(field.id, next)}
+              />
+            ),
+          )}
         </Paper>
       ))}
 

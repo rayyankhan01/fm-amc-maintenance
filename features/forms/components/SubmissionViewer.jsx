@@ -42,14 +42,16 @@ export default function SubmissionViewer({ submission }) {
   );
   const fields = submission.form_templates?.form_fields ?? [];
   const headerFields = fields.filter(
-    (field) => field.field_type !== "checklist_item",
+    (field) =>
+      field.field_type !== "checklist_item" && field.field_type !== "image",
   );
-  const checklistFields = fields.filter(
-    (field) => field.field_type === "checklist_item",
+  const sectionableFields = fields.filter(
+    (field) =>
+      field.field_type === "checklist_item" || field.field_type === "image",
   );
   const sections = [];
 
-  for (const field of checklistFields) {
+  for (const field of sectionableFields) {
     const section = field.section?.trim() || "Inspection checklist";
     const previous = sections[sections.length - 1];
     if (previous?.name === section) previous.fields.push(field);
@@ -110,55 +112,130 @@ export default function SubmissionViewer({ submission }) {
             Inspection information
           </Typography>
           <Stack spacing={1}>
-            {headerFields.map((field) => (
-              <Typography key={field.id}>
-                <strong>{field.label}:</strong>{" "}
-                {responseText(field, responseByField.get(field.id))}
-              </Typography>
-            ))}
+            {headerFields.map((field) => {
+              const response = responseByField.get(field.id);
+
+              // Dead code: headerFields no longer contains "image" fields (see sections
+              // useMemo above), so this branch can't execute. Kept in case that changes.s
+              if (field.field_type === "image") {
+                return (
+                  <Box key={field.id}>
+                    <Typography>
+                      <strong>{field.label}:</strong>
+                    </Typography>
+                    {response?.value ? (
+                      <a
+                        href={response.value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Box
+                          component="img"
+                          src={response.value}
+                          alt={field.label}
+                          sx={{
+                            maxWidth: 200,
+                            maxHeight: 200,
+                            display: "block",
+                            mt: 1,
+                          }}
+                        />
+                      </a>
+                    ) : (
+                      <Typography color="text.secondary">-</Typography>
+                    )}
+                  </Box>
+                );
+              }
+              return (
+                <Typography key={field.id}>
+                  <strong>{field.label}:</strong>{" "}
+                  {responseText(field, response)}
+                </Typography>
+              );
+            })}
           </Stack>
         </Paper>
       )}
 
-      {sections.map((section, index) => (
-        <Paper
-          variant="outlined"
-          sx={{ overflow: "hidden" }}
-          key={`${section.name}-${index}`}
-        >
-          <Typography variant="h6" sx={{ p: 2 }}>
-            {section.name}
-          </Typography>
-          <Divider />
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Inspection item</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Remarks</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {section.fields.map((field) => {
-                const response = responseByField.get(field.id);
-                return (
-                  <TableRow key={field.id}>
-                    <TableCell>{field.label}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={responseText(field, response)}
-                        color={resultColor(response?.result)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{response?.remarks || "-"}</TableCell>
+      {sections.map((section, index) => {
+        const isImageOnlySection = section.fields.every(
+          (field) => field.field_type === "image",
+        );
+        return (
+          <Paper
+            variant="outlined"
+            sx={{ overflow: "hidden" }}
+            key={`${section.name}-${index}`}
+          >
+            <Typography variant="h6" sx={{ p: 2 }}>
+              {section.name}
+            </Typography>
+            <Divider />
+            <Table size="small">
+              {!isImageOnlySection && (
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Inspection item</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Remarks</TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Paper>
-      ))}
+                </TableHead>
+              )}
+
+              <TableBody>
+                {section.fields.map((field) => {
+                  const response = responseByField.get(field.id);
+                  if (field.field_type === "image") {
+                    return (
+                      <TableRow key={field.id}>
+                        <TableCell colSpan={3}>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            <strong>{field.label}</strong>
+                          </Typography>
+                          {response?.value ? (
+                            <a
+                              href={response.value}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Box
+                                component="img"
+                                src={response.value}
+                                alt={field.label}
+                                sx={{
+                                  maxWidth: 200,
+                                  maxHeight: 200,
+                                  display: "block",
+                                }}
+                              />
+                            </a>
+                          ) : (
+                            <Typography color="text.secondary">-</Typography>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  return (
+                    <TableRow key={field.id}>
+                      <TableCell>{field.label}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={responseText(field, response)}
+                          color={resultColor(response?.result)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{response?.remarks || "-"}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Paper>
+        );
+      })}
 
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
