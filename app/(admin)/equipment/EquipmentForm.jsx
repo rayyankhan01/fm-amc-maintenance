@@ -6,6 +6,16 @@ import { createClient } from "@/lib/supabase/client";
 import { getNextUnitNumber } from "@/features/equipment/api";
 import { Alert, Button, MenuItem, Stack, TextField } from "@mui/material";
 
+function expiryDate(refillDate) {
+  if (!refillDate) return "";
+  const date = new Date(`${refillDate}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return "";
+  const month = date.getUTCMonth();
+  date.setUTCFullYear(date.getUTCFullYear() + 1);
+  if (date.getUTCMonth() !== month) date.setUTCDate(0);
+  return date.toISOString().slice(0, 10);
+}
+
 export default function EquipmentForm({
   action,
   initialValues,
@@ -37,6 +47,9 @@ export default function EquipmentForm({
   const selectedFrequency = frequencies.find(
     (item) => item.code === values.amc_frequency,
   );
+  const selectedType = equipmentTypes.find((item) => item.id === values.equipment_type_id);
+  const isFireExtinguisher = selectedType?.name?.trim().toLowerCase() === "fire extinguisher"
+    || selectedType?.code?.trim().toUpperCase() === "FE";
   const nextAmcDate =
     values.amc_date && selectedFrequency?.interval_days
       ? (() => {
@@ -208,6 +221,36 @@ export default function EquipmentForm({
         }}
         helperText="Calculated from the AMC date and selected frequency."
       />
+      {isFireExtinguisher && (
+        <>
+          <TextField
+            type="date"
+            label="Refill Date CO2"
+            value={values.refill_date_co2 ?? ""}
+            onChange={(event) => update("refill_date_co2", event.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            type="date"
+            label="Expire Date CO2"
+            value={expiryDate(values.refill_date_co2)}
+            slotProps={{ input: { readOnly: true }, inputLabel: { shrink: true } }}
+          />
+          <TextField
+            type="date"
+            label="Refill Date DCP"
+            value={values.refill_date_dcp ?? ""}
+            onChange={(event) => update("refill_date_dcp", event.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            type="date"
+            label="Expire Date DCP"
+            value={expiryDate(values.refill_date_dcp)}
+            slotProps={{ input: { readOnly: true }, inputLabel: { shrink: true } }}
+          />
+        </>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
       <Button type="submit" variant="contained" disabled={saving}>
         {saving ? "Saving..." : submitLabel}

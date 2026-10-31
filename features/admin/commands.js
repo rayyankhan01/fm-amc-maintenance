@@ -86,6 +86,8 @@ function equipmentInput(input) {
     status: toPascalDisplay(input.status, "Equipment status"),
     amc_frequency: toPascalDisplay(input.amc_frequency, "AMC frequency"),
     amc_date: amcDate,
+    refill_date_co2: input.refill_date_co2 || null,
+    refill_date_dcp: input.refill_date_dcp || null,
   };
 }
 

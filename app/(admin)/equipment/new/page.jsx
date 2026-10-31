@@ -63,6 +63,8 @@ export default async function NewEquipmentPage() {
           amc_frequency: lookups.frequencies[0]?.code ?? "",
           amc_date: "",
           next_amc_date: "",
+          refill_date_co2: "",
+          refill_date_dcp: "",
         }}
         {...lookups}
         submitLabel="Add Asset"

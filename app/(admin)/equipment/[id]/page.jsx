@@ -48,7 +48,7 @@ export default async function EditEquipmentPage({ params }) {
     supabase
       .from("equipment")
       .select(
-        "id, asset_id, equipment_type_id, equipment_type, equipment_type_code, unit_number, name, status, amc_frequency, amc_date, next_amc_date, locations(site_code, site_name, room_area)",
+        "id, asset_id, equipment_type_id, equipment_type, equipment_type_code, unit_number, name, status, amc_frequency, amc_date, next_amc_date, refill_date_co2, refill_date_dcp, locations(site_code, site_name, room_area)",
       )
       .eq("id", id)
       .single(),
@@ -92,6 +92,8 @@ export default async function EditEquipmentPage({ params }) {
           amc_frequency: amcFrequency,
           amc_date: equipment.amc_date ?? "",
           next_amc_date: equipment.next_amc_date ?? "",
+          refill_date_co2: equipment.refill_date_co2 ?? "",
+          refill_date_dcp: equipment.refill_date_dcp ?? "",
         }}
         {...lookups}
         submitLabel="Save asset"
