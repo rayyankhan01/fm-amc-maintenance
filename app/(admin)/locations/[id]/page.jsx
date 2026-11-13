@@ -22,8 +22,8 @@ export default async function EditLocationPage({ params }) {
         redirectTo="/locations"
         initialValues={location}
         fields={[
-          { name: "site_code", label: "Site code" },
-          { name: "site_name", label: "Site name", required: false },
+          { name: "site_code", label: "Site Location" },
+          { name: "site_name", label: "Site Name", required: false },
           { name: "room_area", label: "Room/area" },
         ]}
       />

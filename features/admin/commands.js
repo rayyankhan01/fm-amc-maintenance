@@ -39,7 +39,7 @@ function positiveInterval(value) {
 }
 
 async function findOrCreateAdminLocation(supabase, input) {
-  const siteCode = required(input.site_code, "Site code");
+  const siteCode = required(input.site_code, "Site Location");
   const roomArea = required(input.room_area, "Room/area");
   const siteName = String(input.site_name ?? "").trim() || null;
   const { data: existing, error: findError } = await supabase
@@ -185,7 +185,7 @@ export async function deleteAdminEquipment(id) {
 export async function createLocation(input) {
   const supabase = await requireAdmin();
   const { error } = await supabase.from("locations").insert({
-    site_code: required(input.site_code, "Site code"),
+    site_code: required(input.site_code, "Site Location"),
     site_name: String(input.site_name ?? "").trim() || null,
     room_area: required(input.room_area, "Room/area"),
   });
@@ -198,7 +198,7 @@ export async function updateLocation(input) {
   const { error } = await supabase
     .from("locations")
     .update({
-      site_code: required(input.site_code, "Site code"),
+      site_code: required(input.site_code, "Site Location"),
       site_name: String(input.site_name ?? "").trim() || null,
       room_area: required(input.room_area, "Room/area"),
     })
