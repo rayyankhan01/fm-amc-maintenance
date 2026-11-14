@@ -38,34 +38,60 @@ function positiveInterval(value) {
   return interval;
 }
 
-async function findOrCreateAdminLocation(supabase, input) {
-  const siteCode = required(input.site_code, "Site Location");
-  const roomArea = required(input.room_area, "Room/area");
-  const siteName = String(input.site_name ?? "").trim() || null;
-  const { data: existing, error: findError } = await supabase
-    .from("locations")
-    .select("id")
-    .eq("site_code", siteCode)
-    .eq("room_area", roomArea)
-    .maybeSingle();
-  if (findError) throw findError;
-  if (existing) {
-    if (siteName)
-      await supabase
-        .from("locations")
-        .update({ site_name: siteName })
-        .eq("id", existing.id);
-    return existing.id;
-  }
+const DUPLICATE_LOCATION_MESSAGE =
+  "This location already exists (same site location, site name and room/area).";
+
+// Same key as the locations_site_name_room_unique index (migration 0017):
+// site + site name + room, ignoring case and surrounding spaces.
+function locationKey(siteCode, siteName, roomArea) {
+  return [siteCode, siteName ?? "", roomArea]
+    .map((value) => String(value).trim().toLowerCase())
+    .join("|");
+}
+
+// excludeId skips one row, so editing a location doesn't match itself.
+async function findLocationId(
+  supabase,
+  siteCode,
+  siteName,
+  roomArea,
+  excludeId = null,
+) {
   const { data, error } = await supabase
     .from("locations")
-    .insert({
-      site_code: siteCode,
-      site_name: siteName,
-      room_area: roomArea,
-    })
+    .select("id, site_code, site_name, room_area");
+  if (error) throw error;
+  const key = locationKey(siteCode, siteName, roomArea);
+  const match = (data ?? []).find(
+    (row) =>
+      row.id !== excludeId &&
+      locationKey(row.site_code, row.site_name, row.room_area) === key,
+  );
+  return match?.id ?? null;
+}
+
+function locationValues(input) {
+  return {
+    site_code: required(input.site_code, "Site Location"),
+    site_name: String(input.site_name ?? "").trim() || null,
+    room_area: required(input.room_area, "Room/area"),
+  };
+}
+
+async function findOrCreateAdminLocation(supabase, input) {
+  const values = locationValues(input);
+  const lookup = [values.site_code, values.site_name, values.room_area];
+
+  const existingId = await findLocationId(supabase, ...lookup);
+  if (existingId) return existingId;
+
+  const { data, error } = await supabase
+    .from("locations")
+    .insert(values)
     .select("id")
     .single();
+  // Another request created the same location a moment ago: use that one.
+  if (error?.code === "23505") return findLocationId(supabase, ...lookup);
   if (error) throw error;
   return data.id;
 }
@@ -184,27 +210,46 @@ export async function deleteAdminEquipment(id) {
 
 export async function createLocation(input) {
   const supabase = await requireAdmin();
-  const { error } = await supabase.from("locations").insert({
-    site_code: required(input.site_code, "Site Location"),
-    site_name: String(input.site_name ?? "").trim() || null,
-    room_area: required(input.room_area, "Room/area"),
-  });
+  const values = locationValues(input);
+  if (
+    await findLocationId(
+      supabase,
+      values.site_code,
+      values.site_name,
+      values.room_area,
+    )
+  ) {
+    return { error: DUPLICATE_LOCATION_MESSAGE };
+  }
+  const { error } = await supabase.from("locations").insert(values);
+  if (error?.code === "23505") return { error: DUPLICATE_LOCATION_MESSAGE };
   if (error) throw error;
   revalidatePath("/locations");
+  return { error: null };
 }
 
 export async function updateLocation(input) {
   const supabase = await requireAdmin();
+  const values = locationValues(input);
+  if (
+    await findLocationId(
+      supabase,
+      values.site_code,
+      values.site_name,
+      values.room_area,
+      input.id,
+    )
+  ) {
+    return { error: DUPLICATE_LOCATION_MESSAGE };
+  }
   const { error } = await supabase
     .from("locations")
-    .update({
-      site_code: required(input.site_code, "Site Location"),
-      site_name: String(input.site_name ?? "").trim() || null,
-      room_area: required(input.room_area, "Room/area"),
-    })
+    .update(values)
     .eq("id", input.id);
+  if (error?.code === "23505") return { error: DUPLICATE_LOCATION_MESSAGE };
   if (error) throw error;
   revalidatePath("/locations");
+  return { error: null };
 }
 
 export async function deleteLocation(id) {

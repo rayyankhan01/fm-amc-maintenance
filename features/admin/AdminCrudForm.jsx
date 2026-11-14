@@ -15,11 +15,16 @@ export default function AdminCrudForm({ action, initialValues, fields, redirectT
     setSaving(true);
     setError(null);
     try {
-      await action(values);
+      const result = await action(values);
+      if (result?.error) {
+        setError(result.error);
+        setSaving(false);
+        return;
+      }
       router.push(redirectTo);
       router.refresh();
     } catch (actionError) {
-      setError(actionError.message ?? 'Unable to save record.');
+      setError(actionError.message ?? "Unable to save record.");
       setSaving(false);
     }
   }
