@@ -31,29 +31,42 @@ export default function LoginPage() {
     // with a synthetic one derived from emp_id (never actually emailed to).
     const email = `${empId.trim().toLowerCase()}@sevenspikes.internal`;
 
-    const supabase = createClient();
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setError(authError.message);
+      if (authError) {
+        setError(authError.code === "invalid_credentials"
+          ? "The employee ID or password is incorrect. Please try again."
+          : "Unable to sign in right now. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("emp_role")
+        .eq("id", data.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        setError("Unable to load your account details. Please contact an administrator.");
+        setLoading(false);
+        return;
+      }
+
+      const isAdminSide =
+        profile.emp_role === "admin" || profile.emp_role === "manager";
+
+      router.push(isAdminSide ? "/dashboard" : "/inspections");
+      router.refresh();
+    } catch {
+      setError("Unable to sign in right now. Check your connection and try again.");
       setLoading(false);
-      return;
     }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("emp_role")
-      .eq("id", data.user.id)
-      .single();
-
-    const isAdminSide =
-      profile?.emp_role === "admin" || profile?.emp_role === "manager";
-
-    router.push(isAdminSide ? "/dashboard" : "/inspections");
-    router.refresh();
   }
 
   return (

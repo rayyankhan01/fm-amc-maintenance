@@ -142,8 +142,8 @@ export default function ChecklistForm({
 
       router.push("/inspections/amc");
       router.refresh();
-    } catch (submitError) {
-      setError(submitError.message ?? "Failed to submit inspection.");
+    } catch {
+      setError("The inspection may not have been fully saved. Check its history or contact an administrator before submitting again.");
       setSubmitting(false);
       setSubmitConfirmOpen(false);
     }
@@ -176,8 +176,8 @@ export default function ChecklistForm({
 
       router.push("/inspections/amc");
       router.refresh();
-    } catch (submitError) {
-      setCancelError(submitError.message ?? "Failed to submit cancellation.");
+    } catch {
+      setCancelError("The cancellation may not have been fully saved. Check its history or contact an administrator before submitting again.");
       setCancelSubmitting(false);
     }
   }

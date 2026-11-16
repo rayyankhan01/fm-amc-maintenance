@@ -24,7 +24,7 @@ export default async function AdminUsersPage() {
             id: user.id,
             searchText: [user.name, user.emp_id, user.emp_role].filter(Boolean).join(' '),
             filters: { role: user.emp_role },
-            content: <TableRow key={user.id}><TableCell>{user.name}</TableCell><TableCell>{user.emp_id}</TableCell><TableCell>{user.emp_role}</TableCell><TableCell><Button href={`/users/${user.id}`}>Edit</Button><form action={deleteSystemUser.bind(null, user.id)} style={{ display: 'inline' }}><DeleteConfirmationButton title="Delete user?" message="This will permanently delete the user account and profile. The user will no longer be able to sign in." /></form></TableCell></TableRow>,
+            content: <TableRow key={user.id}><TableCell>{user.name}</TableCell><TableCell>{user.emp_id}</TableCell><TableCell>{user.emp_role}</TableCell><TableCell><Button href={`/users/${user.id}`}>Edit</Button><DeleteConfirmationButton action={deleteSystemUser.bind(null, user.id)} title="Delete user?" message="This will permanently delete the user account and profile. The user will no longer be able to sign in." /></TableCell></TableRow>,
           }))}
         />
     </Container>

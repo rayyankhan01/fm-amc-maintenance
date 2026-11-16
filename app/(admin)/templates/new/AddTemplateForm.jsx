@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { createTemplate } from "@/features/forms/api";
+import { userError } from "@/lib/userError";
 import { Alert, Box, MenuItem, TextField, Stack, Button } from "@mui/material";
 /**
  * @param {{ equipmentTypes: Array<{ id: string, code: string, name: string }> }} props
@@ -44,7 +45,7 @@ export default function AddTemplateForm({ equipmentTypes }) {
       setError(
         submitError.code === "23505"
           ? "A template already exists for this asset type."
-          : (submitError.message ?? "Failed to create template"),
+          : userError(submitError, "Unable to create the template. Please try again."),
       );
       setSubmitting(false);
     }
