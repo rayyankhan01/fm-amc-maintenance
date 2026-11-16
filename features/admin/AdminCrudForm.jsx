@@ -25,7 +25,7 @@ export default function AdminCrudForm({ action, initialValues, fields, redirectT
       router.push(redirectTo);
       router.refresh();
     } catch (actionError) {
-      setError(userError(actionError, 'Unable to save this record. Please check the details and try again.'));
+      setError(actionError.message ?? "Unable to save record.");
       setSaving(false);
     }
   }
