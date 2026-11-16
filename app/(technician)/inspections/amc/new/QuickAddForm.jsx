@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { userError } from "@/lib/userError";
 import {
   createEquipment,
   findOrCreateLocation,
@@ -60,7 +61,7 @@ export default function QuickAddForm({ equipmentTypes, sites }) {
       setError(
         submitError.code === "23505"
           ? "Equipment type code + unit number combination already exists."
-          : (submitError.message ?? "Failed to create equipment"),
+          : userError(submitError, "Unable to create the asset. Please try again."),
       );
       setSubmitting(false);
     }
@@ -111,7 +112,7 @@ export default function QuickAddForm({ equipmentTypes, sites }) {
 
       await finishCreating(location_id, code, selectedType);
     } catch (submitError) {
-      setError(submitError.message ?? "Failed to create equipment");
+      setError(userError(submitError, "Unable to create the asset. Please try again."));
       setSubmitting(false);
     }
   }

@@ -43,16 +43,12 @@ export default async function EquipmentTypesPage() {
                 <TableCell>
                   <Button href={`/equipment-types/${item.id}`}>Edit</Button>
                   {item.is_active ? (
-                    <form
-                      action={deleteEquipmentType.bind(null, item.id)}
-                      style={{ display: "inline" }}
-                    >
                       <DeleteConfirmationButton
+                        action={deleteEquipmentType.bind(null, item.id)}
                         actionLabel="Deactivate"
                         title="Deactivate asset type?"
                         message="Existing assets keep their current category, but this asset type will no longer be available for new assets."
                       />
-                    </form>
                   ) : (
                     <form
                       action={activateEquipmentType.bind(null, item.id)}

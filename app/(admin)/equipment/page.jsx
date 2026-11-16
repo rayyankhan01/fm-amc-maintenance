@@ -96,15 +96,11 @@ export default async function AdminEquipmentPage() {
                 <TableCell>{item.amc_frequency ?? "-"}</TableCell>
                 <TableCell>
                   <Button href={`/equipment/${item.id}`}>Edit</Button>
-                  <form
-                    action={deleteAdminEquipment.bind(null, item.id)}
-                    style={{ display: "inline" }}
-                  >
                     <DeleteConfirmationButton
+                      action={deleteAdminEquipment.bind(null, item.id)}
                       title="Delete asset?"
                       message="This will permanently delete the asset record. Existing inspection history may prevent deletion."
                     />
-                  </form>
                 </TableCell>
               </TableRow>
             ),

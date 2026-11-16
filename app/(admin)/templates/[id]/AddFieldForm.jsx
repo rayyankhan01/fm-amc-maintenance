@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { addFormField } from "@/features/forms/api";
+import { userError } from "@/lib/userError";
 import {
   Alert,
   Checkbox,
@@ -75,7 +76,7 @@ export default function AddFieldForm({ templateId, fields }) {
       setLabel("");
       router.refresh();
     } catch (submitError) {
-      setError(submitError.message ?? "Failed to add field.");
+      setError(userError(submitError, "Unable to add this field. Please try again."));
     } finally {
       setSubmitting(false);
     }

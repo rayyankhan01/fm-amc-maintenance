@@ -69,16 +69,12 @@ export default async function StatusesPage() {
                 <TableCell>
                   <Button href={`/statuses/${item.id}`}>Edit</Button>
                   {item.is_active && (
-                    <form
-                      action={deactivateStatusValue.bind(null, item.id)}
-                      style={{ display: "inline" }}
-                    >
                       <DeleteConfirmationButton
+                        action={deactivateStatusValue.bind(null, item.id)}
                         actionLabel="Deactivate"
                         title="Deactivate status?"
                         message="Existing assets keep their current value, but this status will no longer be available for new assets."
                       />
-                    </form>
                   )}
                 </TableCell>
               </TableRow>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, Button, MenuItem, Stack, TextField } from '@mui/material';
+import { userError } from '@/lib/userError';
 
 export default function AdminCrudForm({ action, initialValues, fields, redirectTo, submitLabel = 'Save' }) {
   const router = useRouter();
@@ -15,11 +16,16 @@ export default function AdminCrudForm({ action, initialValues, fields, redirectT
     setSaving(true);
     setError(null);
     try {
-      await action(values);
+      const result = await action(values);
+      if (result?.error) {
+        setError(result.error);
+        setSaving(false);
+        return;
+      }
       router.push(redirectTo);
       router.refresh();
     } catch (actionError) {
-      setError(actionError.message ?? 'Unable to save record.');
+      setError(userError(actionError, 'Unable to save this record. Please check the details and try again.'));
       setSaving(false);
     }
   }
