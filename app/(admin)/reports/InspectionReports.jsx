@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import { exportCsv } from "./reportUtils";
 import { printReport } from "./reportPrint";
+import { userError } from "@/lib/userError";
 import ReportHeader, { formatReportPeriod } from "./ReportHeader";
 import SummaryReport from "./SummaryReport";
 import { createClient } from "@/lib/supabase/client";
@@ -189,7 +190,7 @@ function MaintenanceHistoryDialog({ equipment }) {
                           } catch (err) {
                             setSaveErrors((prev) => ({
                               ...prev,
-                              [issue.id]: err.message ?? "Failed to save cost",
+                              [issue.id]: userError(err, "Unable to save the cost. Please try again."),
                             }));
                           }
                         }}

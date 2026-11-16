@@ -10,6 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { createClient } from "@/lib/supabase/client";
+import { userError } from "@/lib/userError";
 
 export default function ImageUploadField({ label, onChange }) {
   const fileInputRef = useRef(null);
@@ -23,26 +24,25 @@ export default function ImageUploadField({ label, onChange }) {
     setUploading(true);
     setError(null);
 
-    const supabase = createClient();
-    const path = `${crypto.randomUUID()}-${file.name}`;
+    try {
+      const supabase = createClient();
+      const path = `${crypto.randomUUID()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("inspection-photos")
+        .upload(path, file);
+      if (uploadError) throw uploadError;
 
-    const { error: uploadError } = await supabase.storage
-      .from("inspection-photos")
-      .upload(path, file);
-
-    if (uploadError) {
-      setError(uploadError.message);
-      setUploading(null);
-      return;
+      const { data } = supabase.storage
+        .from("inspection-photos")
+        .getPublicUrl(path);
+      setPreviewUrl(data.publicUrl);
+      onChange(data.publicUrl);
+    } catch (uploadError) {
+      setError(userError(uploadError, "Unable to upload the image. Please check your connection and try again."));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } finally {
+      setUploading(false);
     }
-
-    const { data } = supabase.storage
-      .from("inspection-photos")
-      .getPublicUrl(path);
-
-    setPreviewUrl(data.publicUrl);
-    onChange(data.publicUrl);
-    setUploading(false);
   }
 
   function handleClear() {

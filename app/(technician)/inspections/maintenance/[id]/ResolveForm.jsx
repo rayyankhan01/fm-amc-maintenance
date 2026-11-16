@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { resolveMaintenanceIssue } from "@/features/forms/api";
+import { userError } from "@/lib/userError";
 import { Box, TextField, Button, Alert, Stack } from "@mui/material";
 
 export default function ResolveIssueForm({ issueId, technicianId }) {
@@ -28,7 +29,7 @@ export default function ResolveIssueForm({ issueId, technicianId }) {
       });
       router.refresh();
     } catch (submitError) {
-      setError(submitError.message ?? "Failed to resolve issue.");
+      setError(userError(submitError, "Unable to mark this issue resolved. Please try again."));
       setSubmitting(false);
     }
   }

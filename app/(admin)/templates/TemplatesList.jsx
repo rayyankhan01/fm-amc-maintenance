@@ -6,10 +6,12 @@ import {
   TableCell,
   Button,
   Box,
+  Alert,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteTemplate } from "@/features/forms/api";
+import { userError } from "@/lib/userError";
 import IconButton from "@mui/material/IconButton";
 import DeleteSharpIcon from "@mui/icons-material/DeleteSharp";
 import AdminList from "../AdminList";
@@ -30,13 +32,14 @@ export default function TemplatesList({ templates }) {
       setError(
         deleteError.code === "23503"
           ? "This template has existing inspection submissions and cannot be deleted."
-          : (deleteError.message ?? "Failed to delete template."),
+          : userError(deleteError, "Unable to delete this template. Please try again."),
       );
     }
   }
 
   return (
     <>
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
       <Box
         sx={{
           display: "flex",

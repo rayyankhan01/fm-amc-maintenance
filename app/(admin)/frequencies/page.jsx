@@ -52,19 +52,12 @@ export default async function FrequenciesPage() {
                 <TableCell>
                   <Button href={`/frequencies/${item.id}`}>Edit</Button>
                   {item.is_active ? (
-                    <form
-                      action={deactivateMaintenanceFrequency.bind(
-                        null,
-                        item.id,
-                      )}
-                      style={{ display: "inline" }}
-                    >
                       <DeleteConfirmationButton
+                        action={deactivateMaintenanceFrequency.bind(null, item.id)}
                         actionLabel="Deactivate"
                         title="Deactivate frequency?"
                         message="Existing assets keep their current value, but this frequency will no longer be available for new assets."
                       />
-                    </form>
                   ) : (
                     <form
                       action={activateMaintenanceFrequency.bind(null, item.id)}

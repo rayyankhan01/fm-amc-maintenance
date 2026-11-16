@@ -13,7 +13,7 @@ async function getLookups(supabase) {
       .order("name"),
     supabase
       .from("status_values")
-      .select("id, code, label, parent_id")
+      .select("code, label")
       .eq("is_active", true)
       .order("sort_order"),
     supabase

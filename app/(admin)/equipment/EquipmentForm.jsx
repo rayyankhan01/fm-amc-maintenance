@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getNextUnitNumber } from "@/features/equipment/api";
+import { userError } from "@/lib/userError";
 import { Alert, Button, MenuItem, Stack, TextField } from "@mui/material";
 
 function expiryDate(refillDate) {
@@ -47,15 +48,10 @@ export default function EquipmentForm({
   const selectedFrequency = frequencies.find(
     (item) => item.code === values.amc_frequency,
   );
-  const selectedType = equipmentTypes.find(
-    (item) => item.id === values.equipment_type_id,
-  );
-  const isFireExtinguisher =
-    selectedType?.name?.trim().toLowerCase() === "fire extinguisher" ||
-    selectedType?.code?.trim().toUpperCase() === "FE";
-  const hasCapacityType = ["FET", "FP&WT"].includes(
-    selectedType?.code?.trim().toUpperCase(),
-  );
+  const selectedType = equipmentTypes.find((item) => item.id === values.equipment_type_id);
+  const isFireExtinguisher = selectedType?.name?.trim().toLowerCase() === "fire extinguisher"
+    || selectedType?.code?.trim().toUpperCase() === "FE";
+  const hasCapacityType = ["FET", "FP&WT"].includes(selectedType?.code?.trim().toUpperCase());
   const nextAmcDate =
     values.amc_date && selectedFrequency?.interval_days
       ? (() => {
@@ -64,19 +60,7 @@ export default function EquipmentForm({
           return date.toISOString().slice(0, 10);
         })()
       : values.next_amc_date || "";
-  const byParentStatus = new Map();
-  for (const status of statuses) {
-    const key = status.parent_id ?? "null";
-    if (!byParentStatus.has(key)) byParentStatus.set(key, []);
-    byParentStatus.get(key).push(status);
-  }
-  const orderedStatuses = [];
-  for (const topLevel of byParentStatus.get("null") ?? []) {
-    orderedStatuses.push({ ...topLevel, depth: 0 });
-    for (const child of byParentStatus.get(topLevel.id) ?? []) {
-      orderedStatuses.push({ ...child, depth: 1 });
-    }
-  }
+
   async function handleTypeCodeBlur() {
     if (values.id) return; // don't recalculate when editing existing equipment
     const code = values.equipment_type_code?.trim();
@@ -87,6 +71,8 @@ export default function EquipmentForm({
       const supabase = createClient();
       const next = await getNextUnitNumber(supabase, code);
       update("unit_number", next);
+    } catch (lookupError) {
+      setError(userError(lookupError, "Unable to determine the next unit number. Please try again."));
     } finally {
       setCheckingUnitNumber(false);
     }
@@ -97,14 +83,19 @@ export default function EquipmentForm({
     setSaving(true);
     setError(null);
     try {
-      await action(values);
+      const result = await action(values);
+      if (result?.error) {
+        setError(result.error);
+        setSaving(false);
+        return;
+      }
       router.push("/equipment");
       router.refresh();
     } catch (submitError) {
       setError(
         submitError.code === "23505"
           ? "An asset record with this type code and unit number already exists."
-          : (submitError.message ?? "Unable to save asset."),
+          : userError(submitError, "Unable to save this asset. Please check the details and try again."),
       );
       setSaving(false);
     }
@@ -209,13 +200,9 @@ export default function EquipmentForm({
         value={values.status}
         onChange={(event) => update("status", event.target.value)}
       >
-        {orderedStatuses.map((status) => (
-          <MenuItem
-            key={status.code}
-            value={status.code}
-            sx={{ pl: 2 + status.depth * 2 }}
-          >
-            {status.depth > 0 ? `└ ${status.label}` : status.label}
+        {statuses.map((status) => (
+          <MenuItem key={status.code} value={status.code}>
+            {status.label}
           </MenuItem>
         ))}
       </TextField>
@@ -263,10 +250,7 @@ export default function EquipmentForm({
             type="date"
             label="Expire Date CO2"
             value={expiryDate(values.refill_date_co2)}
-            slotProps={{
-              input: { readOnly: true },
-              inputLabel: { shrink: true },
-            }}
+            slotProps={{ input: { readOnly: true }, inputLabel: { shrink: true } }}
           />
           <TextField
             type="date"
@@ -279,10 +263,7 @@ export default function EquipmentForm({
             type="date"
             label="Expire Date DCP"
             value={expiryDate(values.refill_date_dcp)}
-            slotProps={{
-              input: { readOnly: true },
-              inputLabel: { shrink: true },
-            }}
+            slotProps={{ input: { readOnly: true }, inputLabel: { shrink: true } }}
           />
         </>
       )}

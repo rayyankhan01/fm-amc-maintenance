@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteFormField, updateFormField } from "@/features/forms/api";
+import { userError } from "@/lib/userError";
 import {
   Paper,
   TableRow,
@@ -92,7 +93,7 @@ export default function FieldsTable({ fields }) {
       setEditForm(null);
       router.refresh();
     } catch (updateError) {
-      setError(updateError.message ?? "Failed to update field");
+      setError(userError(updateError, "Unable to update this field. Please try again."));
     }
   }
 
@@ -106,8 +107,8 @@ export default function FieldsTable({ fields }) {
     } catch (deleteError) {
       setError(
         deleteError.code === "23503"
-          ? "This filed has existing inspection messages and cannot be deleted "
-          : (deleteError.message ?? "Deletion failed"),
+          ? "This field is used by existing inspections and cannot be deleted."
+          : userError(deleteError, "Unable to delete this field. Please try again."),
       );
     }
   }
@@ -129,7 +130,7 @@ export default function FieldsTable({ fields }) {
       });
       router.refresh();
     } catch (moveError) {
-      setError(moveError.message ?? "Failed to reorder field.");
+      setError(userError(moveError, "Unable to reorder the fields. Refresh the page and check their order before trying again."));
     }
   }
 

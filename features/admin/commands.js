@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
+import { userError } from "@/lib/userError";
 
 async function requireAdmin() {
   await requireRole(["admin"]);
@@ -38,18 +39,15 @@ function positiveInterval(value) {
   return interval;
 }
 
-const DUPLICATE_LOCATION_MESSAGE =
-  "This location already exists (same site location, site name and room/area).";
+const DUPLICATE_LOCATION_MESSAGE = "This location already exists (same site location, site name and room/area).";
 
-// Same key as the locations_site_name_room_unique index (migration 0017):
-// site + site name + room, ignoring case and surrounding spaces.
 function locationKey(siteCode, siteName, roomArea) {
   return [siteCode, siteName ?? "", roomArea]
     .map((value) => String(value).trim().toLowerCase())
     .join("|");
 }
 
-// excludeId skips one row, so editing a location doesn't match itself.
+
 async function findLocationId(
   supabase,
   siteCode,
@@ -90,7 +88,7 @@ async function findOrCreateAdminLocation(supabase, input) {
     .insert(values)
     .select("id")
     .single();
-  // Another request created the same location a moment ago: use that one.
+  
   if (error?.code === "23505") return findLocationId(supabase, ...lookup);
   if (error) throw error;
   return data.id;
@@ -155,16 +153,20 @@ export async function createAdminEquipment(input) {
     .eq("id", locationId)
     .single();
   if (locationError) throw locationError;
-  const { error } = await supabase.from("equipment").insert({
-    ...values,
-    asset_id: equipmentAssetId(
-      location.site_code,
-      values.equipment_type_code,
-      values.unit_number,
-    ),
-    location_id: locationId,
-  });
-  if (error) throw error;
+  const { error } = await supabase
+    .from("equipment")
+    .insert({
+      ...values,
+      asset_id: equipmentAssetId(
+        location.site_code,
+        values.equipment_type_code,
+        values.unit_number,
+      ),
+      location_id: locationId,
+    });
+  if (error) return { error: error.code === "23505"
+    ? "An asset record with these details already exists."
+    : userError(error, "Unable to save this asset. Please check the details and try again.") };
   revalidatePath("/equipment");
 }
 
@@ -196,7 +198,9 @@ export async function updateAdminEquipment(input) {
       location_id: locationId,
     })
     .eq("id", input.id);
-  if (error) throw error;
+  if (error) return { error: error.code === "23505"
+    ? "An asset record with these details already exists."
+    : userError(error, "Unable to save this asset. Please check the details and try again.") };
   revalidatePath("/equipment");
   revalidatePath(`/equipment/${input.id}`);
 }
@@ -204,7 +208,9 @@ export async function updateAdminEquipment(input) {
 export async function deleteAdminEquipment(id) {
   const supabase = await requireAdmin();
   const { error } = await supabase.from("equipment").delete().eq("id", id);
-  if (error) throw error;
+  if (error) return { error: error.code === "23503"
+    ? "This asset cannot be deleted because it has related inspection or movement history."
+    : "Unable to delete this asset. Please try again." };
   revalidatePath("/equipment");
 }
 
@@ -257,10 +263,9 @@ export async function deleteLocation(id) {
   const { error } = await supabase.from("locations").delete().eq("id", id);
   if (error) {
     return {
-      error:
-        error.code === "23503"
-          ? "This location cannot be deleted because it is linked to assets or movement history."
-          : "Could not delete this location. Please try again.",
+      error: error.code === "23503"
+        ? "This location cannot be deleted because it is linked to assets or movement history."
+        : "Could not delete this location. Please try again.",
     };
   }
   revalidatePath("/locations");
@@ -272,7 +277,7 @@ export async function createEquipmentType(input) {
     code: required(input.code, "Code").toUpperCase(),
     name: required(input.name, "Name"),
   });
-  if (error) throw error;
+  if (error) return { error: userError(error, "Unable to save this asset type. Please try again.") };
   revalidatePath("/equipment-types");
 }
 
@@ -286,7 +291,7 @@ export async function updateEquipmentType(input) {
       is_active: input.is_active !== false,
     })
     .eq("id", input.id);
-  if (error) throw error;
+  if (error) return { error: userError(error, "Unable to save this asset type. Please try again.") };
   revalidatePath("/equipment-types");
 }
 
@@ -318,9 +323,8 @@ export async function createStatusValue(input) {
     code: required(input.code, "Code").toUpperCase(),
     label: required(input.label, "Label"),
     sort_order: Number(input.sort_order) || 0,
-    parent_id: input.parent_id || null,
   });
-  if (error) throw error;
+  if (error) return { error: userError(error, "Unable to save this status. Please try again.") };
   revalidatePath("/configuration");
   revalidatePath("/statuses");
 }
@@ -334,10 +338,9 @@ export async function updateStatusValue(input) {
       label: required(input.label, "Label"),
       sort_order: Number(input.sort_order) || 0,
       is_active: input.is_active !== false,
-      parent_id: input.parent_id || null,
     })
     .eq("id", input.id);
-  if (error) throw error;
+  if (error) return { error: userError(error, "Unable to save this status. Please try again.") };
   revalidatePath("/configuration");
   revalidatePath("/statuses");
 }
@@ -360,7 +363,7 @@ export async function createMaintenanceFrequency(input) {
     label: required(input.label, "Label"),
     interval_days: positiveInterval(input.interval_days),
   });
-  if (error) throw error;
+  if (error) return { error: userError(error, "Unable to save this frequency. Please try again.") };
   revalidatePath("/configuration");
   revalidatePath("/frequencies");
 }
@@ -376,7 +379,7 @@ export async function updateMaintenanceFrequency(input) {
       is_active: input.is_active !== false,
     })
     .eq("id", input.id);
-  if (error) throw error;
+  if (error) return { error: userError(error, "Unable to save this frequency. Please try again.") };
   revalidatePath("/configuration");
   revalidatePath("/frequencies");
 }
@@ -418,7 +421,9 @@ export async function createSystemUser(input) {
       password,
       email_confirm: true,
     });
-  if (authError) throw authError;
+  if (authError) return { error: authError.code === "email_exists" || authError.code === "user_already_exists"
+    ? "An account with this employee ID already exists."
+    : userError(authError, "Unable to create this user. Please check the details and try again.") };
 
   const { error: profileError } = await supabase.from("profiles").insert({
     id: authUser.user.id,
@@ -429,7 +434,7 @@ export async function createSystemUser(input) {
 
   if (profileError) {
     await supabase.auth.admin.deleteUser(authUser.user.id);
-    throw profileError;
+    return { error: "Unable to finish creating this user. Please contact an administrator before trying again." };
   }
 
   revalidatePath("/users");
@@ -444,7 +449,7 @@ export async function updateSystemUser(input) {
       emp_role: requiredUserRole(input.emp_role),
     })
     .eq("id", input.id);
-  if (error) throw error;
+  if (error) return { error: userError(error, "Unable to save this user. Please try again.") };
   revalidatePath("/users");
 }
 
