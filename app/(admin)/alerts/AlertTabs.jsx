@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Box, Tab, Tabs } from "@mui/material";
-import DueOverdueAlerts from "./DueOverdueAlerts";
+import DueOverdueAlerts from "./DueOverdueList";
 import CancelledList from "./CancelledList";
 import NewAssetsList from "./NewAssetsList";
 export default function AlertTabs({ dueOverdue, newAssets, cancelled }) {
@@ -15,9 +15,9 @@ export default function AlertTabs({ dueOverdue, newAssets, cancelled }) {
         <Tab value="new" label={`New Assets (${newAssets.length})`} />
       </Tabs>
       <Box sx={{ pt: 2 }}>
-        {tab === "due" && <DueOverdueAlerts dueOverdue={dueOverdue} />}
-        {tab === "cancelled" && <CancelledList cancelled={cancelled} />}
-        {tab === "new" && <NewAssetsList newAssets={newAssets} />}
+        {tab === "due" && <DueOverdueAlerts items={dueOverdue} />}
+        {tab === "cancelled" && <CancelledList items={cancelled} />}
+        {tab === "new" && <NewAssetsList items={newAssets} />}
       </Box>
     </>
   );
