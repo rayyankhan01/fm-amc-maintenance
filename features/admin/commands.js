@@ -42,7 +42,7 @@ function positiveInterval(value) {
 const DUPLICATE_LOCATION_MESSAGE = "This location already exists (same site location, site name and room/area).";
 
 function locationKey(siteCode, siteName, roomArea) {
-  return [siteCode, siteName ?? "", roomArea]
+  return [siteCode, siteName ?? "", roomArea ?? ""]
     .map((value) => String(value).trim().toLowerCase())
     .join("|");
 }
@@ -68,11 +68,13 @@ async function findLocationId(
   return match?.id ?? null;
 }
 
-function locationValues(input) {
+function locationValues(input, { optionalRoomArea = false } = {}) {
   return {
     site_code: required(input.site_code, "Site Location"),
     site_name: String(input.site_name ?? "").trim() || null,
-    room_area: required(input.room_area, "Room/area"),
+    room_area: optionalRoomArea
+      ? String(input.room_area ?? "").trim() || null
+      : required(input.room_area, "Room/area"),
   };
 }
 
@@ -216,7 +218,7 @@ export async function deleteAdminEquipment(id) {
 
 export async function createLocation(input) {
   const supabase = await requireAdmin();
-  const values = locationValues(input);
+  const values = locationValues(input, { optionalRoomArea: true });
   if (
     await findLocationId(
       supabase,
