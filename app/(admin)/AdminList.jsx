@@ -32,11 +32,17 @@ export default function AdminList({ columns, rows, filters = [], searchLabel = "
         <TextField
           label={searchLabel}
           value={search}
-          onChange={(event) => { setSearch(event.target.value); setPage(0); }}
+          sx={{ flex: 1 }}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(0);
+          }}
           size="small"
         />
         {filters.map(({ key, label }) => {
-          const options = [...new Set(rows.map((row) => row.filters?.[key]).filter(Boolean))].sort();
+          const options = [
+            ...new Set(rows.map((row) => row.filters?.[key]).filter(Boolean)),
+          ].sort();
           return (
             <TextField
               key={key}
