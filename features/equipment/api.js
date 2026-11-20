@@ -6,28 +6,45 @@
  * @returns {Promise<string>} location id
  */
 
+export async function findOrCreateLocation(supabase, { site_code, room_area }) {
+  const siteCode = site_code.trim().toUpperCase();
+  const room = room_area.trim();
 
-export async function findOrCreateLocation(supabase, {site_code, room_area}){
-    const {data :existing, error:findError} = await supabase
-    .from('locations')
-    .select('id')
-    .eq('site_code', site_code)
-    .eq('room_area',room_area)
-    .maybeSingle()
+  async function findRoom() {
+    const { data, error } = await supabase
+      .from("locations")
+      .select("id,site_name,room_area")
+      .eq("site_code", siteCode);
+    if (error) throw error;
+    return data ?? [];
+  }
 
+  const siteRows = await findRoom();
+  if (siteRows.length === 0) {
+    throw new Error("This site does not exist yet. Ask an admin to add it.");
+  }
+  const sameRoom = (row) =>
+    String(row.room_area ?? "")
+      .trim()
+      .toLowerCase() === room.toLowerCase();
+  const existing = siteRows.find(sameRoom);
+  if (existing) return existing.id;
+  const { data: created, error: createError } = await supabase
+    .from("locations")
+    .insert({
+      site_code: siteCode,
+      site_name: siteRows[0].site_name,
+      room_area: room,
+    })
+    .select("id")
+    .single();
 
-    if(findError) throw findError;
-    if(existing) return existing.id;
-
-    const {data:created, error:createError} = await supabase
-    .from('locations')
-    .insert({site_code, room_area})
-    .select('id')
-    .single()
-
-    if(createError) throw createError;
-    return created.id;
-
+  if (createError?.code === "23505") {
+    const retry = (await findRoom()).find(sameRoom);
+    if (retry) return retry.id;
+  }
+  if (createError) throw createError;
+  return created.id;
 }
 
 /**
@@ -50,9 +67,9 @@ export async function findOrCreateLocation(supabase, {site_code, room_area}){
  */
 export async function createEquipment(supabase, input) {
   const { data, error } = await supabase
-    .from('equipment')
+    .from("equipment")
     .insert(input)
-    .select('id')
+    .select("id")
     .single();
 
   if (error) throw error;
@@ -67,17 +84,15 @@ export async function createEquipment(supabase, input) {
  * @returns {Promise<number>}
  */
 
-
-export async function getNextUnitNumber(supabase, equipmentTypeCode){
-    const {data, error} = await supabase
-    .from('equipment')
-    .select('unit_number')
-    .eq('equipment_type_code', equipmentTypeCode)
-    .order('unit_number', {ascending:false})
+export async function getNextUnitNumber(supabase, equipmentTypeCode) {
+  const { data, error } = await supabase
+    .from("equipment")
+    .select("unit_number")
+    .eq("equipment_type_code", equipmentTypeCode)
+    .order("unit_number", { ascending: false })
     .limit(1)
-    .maybeSingle()
+    .maybeSingle();
 
-    if (error) throw error;
-    return (data?.unit_number ?? 0 ) +1 ;
-
+  if (error) throw error;
+  return (data?.unit_number ?? 0) + 1;
 }
