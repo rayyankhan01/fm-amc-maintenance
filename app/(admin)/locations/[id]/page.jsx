@@ -23,7 +23,7 @@ export default async function EditLocationPage({ params }) {
         initialValues={location}
         fields={[
           { name: "site_code", label: "Site Location" },
-          { name: "site_name", label: "Site Name", required: false },
+          { name: "site_name", label: "Site Name" },
           { name: "room_area", label: "Room/area" },
         ]}
       />

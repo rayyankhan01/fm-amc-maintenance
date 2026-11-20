@@ -67,19 +67,68 @@ async function findLocationId(
   );
   return match?.id ?? null;
 }
+// regex for site code filter
+const SITE_CODE_PATTERN = /^[A-Z0-9-]+$/;
 
 function locationValues(input, { optionalRoomArea = false } = {}) {
+  const siteCode = required(input.site_code, "Site Location").toUpperCase();
+  if (!SITE_CODE_PATTERN.test(siteCode)) {
+    throw new Error(
+      "Site Location may only contain letters, numbers, and '-' (no spaces or '/') ",
+    );
+  }
   return {
-    site_code: required(input.site_code, "Site Location"),
-    site_name: String(input.site_name ?? "").trim() || null,
+    site_code: siteCode,
+    site_name: required(input.site_name, "Site Name"),
     room_area: optionalRoomArea
       ? String(input.room_area ?? "").trim() || null
       : required(input.room_area, "Room/area"),
   };
 }
+// 1:1 rule: a site code has exactly one site name, and a site name has exactly one code.
+async function siteConflict(supabase, siteCode, siteName, excludeId = null) {
+  const { data, error } = await supabase
+    .from("locations")
+    .select("id,site_code,site_name");
+
+  if (error) throw error;
+  const code = siteCode.trim().toUpperCase();
+  const name = siteName.trim().toLowerCase();
+  let existingName = null;
+
+  for (const row of data ?? []) {
+    if (row.id === excludeId) continue;
+    const rowCode = String(row.site_code ?? "-")
+      .trim()
+      .toUpperCase();
+    const rowName = String(row.site_name ?? "-").trim();
+
+    if (rowCode === code && rowName.toLowerCase() !== name) {
+      return {
+        conflict: `Site Location ${code} is already used for ${rowName}. Use that site name, or choose a different one.`,
+        existingName: null,
+      };
+    }
+    if (rowName.toLowerCase() === name && rowCode !== code) {
+      return {
+        conflict: `Site Name "${rowName}" already uses Site Location ${rowCode}.`,
+        existingName: null,
+      };
+    }
+    if (rowCode === code) existingName = rowName;
+  }
+  return { conflict: null, existingName };
+}
 
 async function findOrCreateAdminLocation(supabase, input) {
   const values = locationValues(input);
+  const { conflict, existingName } = await siteConflict(
+    supabase,
+    values.site_code,
+    values.site_name,
+  );
+  if (conflict) throw new Error(conflict);
+  if (existingName) values.site_name = existingName;
   const lookup = [values.site_code, values.site_name, values.room_area];
 
   const existingId = await findLocationId(supabase, ...lookup);
@@ -155,20 +204,25 @@ export async function createAdminEquipment(input) {
     .eq("id", locationId)
     .single();
   if (locationError) throw locationError;
-  const { error } = await supabase
-    .from("equipment")
-    .insert({
-      ...values,
-      asset_id: equipmentAssetId(
-        location.site_code,
-        values.equipment_type_code,
-        values.unit_number,
-      ),
-      location_id: locationId,
-    });
-  if (error) return { error: error.code === "23505"
-    ? "An asset record with these details already exists."
-    : userError(error, "Unable to save this asset. Please check the details and try again.") };
+  const { error } = await supabase.from("equipment").insert({
+    ...values,
+    asset_id: equipmentAssetId(
+      location.site_code,
+      values.equipment_type_code,
+      values.unit_number,
+    ),
+    location_id: locationId,
+  });
+  if (error)
+    return {
+      error:
+        error.code === "23505"
+          ? "An asset record with these details already exists."
+          : userError(
+              error,
+              "Unable to save this asset. Please check the details and try again.",
+            ),
+    };
   revalidatePath("/equipment");
 }
 
@@ -200,9 +254,16 @@ export async function updateAdminEquipment(input) {
       location_id: locationId,
     })
     .eq("id", input.id);
-  if (error) return { error: error.code === "23505"
-    ? "An asset record with these details already exists."
-    : userError(error, "Unable to save this asset. Please check the details and try again.") };
+  if (error)
+    return {
+      error:
+        error.code === "23505"
+          ? "An asset record with these details already exists."
+          : userError(
+              error,
+              "Unable to save this asset. Please check the details and try again.",
+            ),
+    };
   revalidatePath("/equipment");
   revalidatePath(`/equipment/${input.id}`);
 }
@@ -210,15 +271,26 @@ export async function updateAdminEquipment(input) {
 export async function deleteAdminEquipment(id) {
   const supabase = await requireAdmin();
   const { error } = await supabase.from("equipment").delete().eq("id", id);
-  if (error) return { error: error.code === "23503"
-    ? "This asset cannot be deleted because it has related inspection or movement history."
-    : "Unable to delete this asset. Please try again." };
+  if (error)
+    return {
+      error:
+        error.code === "23503"
+          ? "This asset cannot be deleted because it has related inspection or movement history."
+          : "Unable to delete this asset. Please try again.",
+    };
   revalidatePath("/equipment");
 }
 
 export async function createLocation(input) {
   const supabase = await requireAdmin();
   const values = locationValues(input, { optionalRoomArea: true });
+  const { conflict, existingName } = await siteConflict(
+    supabase,
+    values.site_code,
+    values.site_name,
+  );
+  if (conflict) return { error: conflict };
+  if (existingName) values.site_name = existingName;
   if (
     await findLocationId(
       supabase,
@@ -239,6 +311,14 @@ export async function createLocation(input) {
 export async function updateLocation(input) {
   const supabase = await requireAdmin();
   const values = locationValues(input);
+  const { conflict, existingName } = await siteConflict(
+    supabase,
+    values.site_code,
+    values.site_name,
+    input.id,
+  );
+  if (conflict) return { error: conflict };
+  if (existingName) values.site_name = existingName;
   if (
     await findLocationId(
       supabase,
