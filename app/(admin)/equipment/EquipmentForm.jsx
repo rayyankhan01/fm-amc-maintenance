@@ -165,7 +165,7 @@ export default function EquipmentForm({
       <TextField
         required
         select
-        label="Site Name"
+        label="Site"
         value={values.site_code}
         onChange={(event) => {
           const site = locations.find(
@@ -177,15 +177,16 @@ export default function EquipmentForm({
       >
         {locations.map((site) => (
           <MenuItem key={site.site_code} value={site.site_code}>
-            {site.site_name ?? site.site_code}
+            {site.site_code}
           </MenuItem>
         ))}
       </TextField>
       <TextField
         required
-        label="Location / Site Code"
-        value={values.site_code}
-        onChange={(event) => update("site_code", event.target.value)}
+        label="Site Name"
+        value={values.site_name}
+        slotProps={{ input: { readOnly: true } }}
+        helperText="Filled from the selected site."
       />
       <TextField
         required
