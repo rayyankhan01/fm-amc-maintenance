@@ -11,7 +11,7 @@ import {
 import { importAdminEquipment } from "@/features/admin/commands";
 import { IMPORT_COLUMNS, IMPORT_LIMIT } from "@/features/equipment/importValidation";
 
-const DATE_COLUMNS = new Set([10, 12, 13]);
+const DATE_COLUMNS = new Set([8, 10, 11]);
 
 function dateCell(value, date1904) {
   if (value instanceof Date) {
@@ -45,7 +45,7 @@ export default function AssetImport({ types, statuses, frequencies }) {
       [],
       ["AMC Date, Refill Date CO2 and Refill Date DCP: YYYY-MM-DD or Excel dates."],
       ["Capacity/Type: AC, FET and FP&WT only. Refill dates: fire extinguishers only."],
-      ["Capacity/Type and refill dates are optional; all other columns are required."],
+      ["Unit Number is assigned automatically per Asset Type Code. Capacity/Type and refill dates are optional; all other columns are required."],
     ];
     const referenceSheet = XLSX.utils.aoa_to_sheet(reference);
     referenceSheet["!cols"] = Array.from({ length: 6 }, () => ({ wch: 24 }));

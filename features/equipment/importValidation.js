@@ -2,10 +2,8 @@ export const IMPORT_COLUMNS = [
   "Asset Category Code",
   "Asset Type",
   "Asset Type Code",
-  "Unit Number",
   "Asset Name",
   "Site",
-  "Site Name",
   "Room/Area",
   "Status Code",
   "AMC Frequency Code",
@@ -43,12 +41,12 @@ export function validateImportRow(row, lookups) {
     return { error: "Invalid cell value." };
   }
   const cells = row.map(normalized);
-  for (const index of [11, 12, 13]) {
+  for (const index of [9, 10, 11]) {
     if (cells[index] === "-") cells[index] = "";
   }
   if (cells.some((value) => value.length > 255)) return { error: "Cell values must not exceed 255 characters." };
-  const [categoryCode, equipmentType, typeCode, unitText, name, siteCode, siteName, roomArea, statusCode, frequencyCode, amcDate, capacity, refillCo2, refillDcp] = cells;
-  if (![categoryCode, equipmentType, typeCode, unitText, name, siteCode, siteName, roomArea, statusCode, frequencyCode, amcDate].every(Boolean)) {
+  const [categoryCode, equipmentType, typeCode, name, siteCode, roomArea, statusCode, frequencyCode, amcDate, capacity, refillCo2, refillDcp] = cells;
+  if (![categoryCode, equipmentType, typeCode, name, siteCode, roomArea, statusCode, frequencyCode, amcDate].every(Boolean)) {
     return { error: "Complete all required columns." };
   }
   const type = lookups.types.find((item) => item.code.toLowerCase() === categoryCode.toLowerCase());
@@ -58,16 +56,13 @@ export function validateImportRow(row, lookups) {
   }
   const location = lookups.locations.find((item) =>
     normalizedKey(item.site_code) === normalizedKey(siteCode)
-    && normalizedKey(item.site_name) === normalizedKey(siteName),
+    && normalizedKey(item.room_area) === normalizedKey(roomArea),
   );
-  if (!location) return { error: "Site and Site Name must match an existing site." };
+  if (!location) return { error: "Site and Room/Area must match an existing location." };
   const status = lookups.statuses.find((item) => item.code.toLowerCase() === statusCode.toLowerCase());
   if (!status) return { error: "Unknown or inactive status code." };
   const frequency = lookups.frequencies.find((item) => item.code.toLowerCase() === frequencyCode.toLowerCase());
   if (!frequency?.interval_days) return { error: "Unknown or inactive frequency, or frequency has no interval." };
-  if (!/^\d+$/.test(unitText) || !Number.isSafeInteger(Number(unitText)) || Number(unitText) < 1 || Number(unitText) > 2147483647) {
-    return { error: "Unit number must be a positive whole number." };
-  }
   if (!isValidDate(amcDate) || (refillCo2 && !isValidDate(refillCo2)) || (refillDcp && !isValidDate(refillDcp))) {
     return { error: "Dates must be valid and use YYYY-MM-DD." };
   }
@@ -82,7 +77,6 @@ export function validateImportRow(row, lookups) {
       equipment_type_id: type.id,
       equipment_type: type.code,
       equipment_type_code: typeCode.toUpperCase(),
-      unit_number: Number(unitText),
       name,
       site_code: location.site_code,
       site_name: location.site_name,

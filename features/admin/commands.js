@@ -189,7 +189,7 @@ export async function importAdminEquipment(rows) {
   const locations = [];
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await supabase.from("locations")
-      .select("id, site_code, site_name")
+      .select("id, site_code, site_name, room_area")
       .order("id")
       .range(offset, offset + 499);
     if (error) throw new Error("Unable to load sites.");
@@ -222,13 +222,22 @@ export async function importAdminEquipment(rows) {
       continue;
     }
     const asset = validation.value;
-    const key = importAssetKey(asset.equipment_type_code, asset.unit_number);
-    const assetId = equipmentAssetId(asset.site_code, asset.equipment_type_code, asset.unit_number).toUpperCase();
-    if (existingKeys.has(key) || existingIds.has(assetId)) {
-      results.push({ row: rowNumber, status: "Skipped", message: "Asset already exists or is duplicated in this file." });
-      continue;
-    }
     try {
+      const { data: latestAsset, error: latestAssetError } = await supabase
+        .from("equipment")
+        .select("unit_number")
+        .eq("equipment_type_code", asset.equipment_type_code)
+        .order("unit_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestAssetError) throw latestAssetError;
+      asset.unit_number = (latestAsset?.unit_number ?? 0) + 1;
+      const key = importAssetKey(asset.equipment_type_code, asset.unit_number);
+      const assetId = equipmentAssetId(asset.site_code, asset.equipment_type_code, asset.unit_number).toUpperCase();
+      if (existingKeys.has(key) || existingIds.has(assetId)) {
+        results.push({ row: rowNumber, status: "Rejected", message: "Unable to assign a unique unit number. Please retry the import." });
+        continue;
+      }
       const result = await createAdminEquipment(asset);
       if (result?.error) {
         results.push({ row: rowNumber, status: "Rejected", message: result.error });
