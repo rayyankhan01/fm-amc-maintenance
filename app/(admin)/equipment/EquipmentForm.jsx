@@ -51,7 +51,8 @@ export default function EquipmentForm({
   const selectedType = equipmentTypes.find((item) => item.id === values.equipment_type_id);
   const isFireExtinguisher = selectedType?.name?.trim().toLowerCase() === "fire extinguisher"
     || selectedType?.code?.trim().toUpperCase() === "FE";
-  const hasCapacityType = ["FET", "FP&WT"].includes(selectedType?.code?.trim().toUpperCase());
+  const hasCapacityType = ["AC", "FET", "FP&WT"].includes(selectedType?.code?.trim().toUpperCase())
+    || selectedType?.name?.trim().toLowerCase() === "ac";
   const nextAmcDate =
     values.amc_date && selectedFrequency?.interval_days
       ? (() => {
