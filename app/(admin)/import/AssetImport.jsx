@@ -44,7 +44,8 @@ export default function AssetImport({ types, statuses, frequencies }) {
       ]),
       [],
       ["AMC Date, Refill Date CO2 and Refill Date DCP: YYYY-MM-DD or Excel dates."],
-      ["Capacity/Type: AC, FET and FP&WT only. Refill dates: fire extinguishers only."],
+      ["Asset Category: category name. Asset Type: category code. Site: existing site code."],
+      ["Capacity/Type: AC only. Refill dates: fire extinguishers only."],
       ["Unit Number is assigned automatically per Asset Type Code. Capacity/Type and refill dates are optional; all other columns are required."],
     ];
     const referenceSheet = XLSX.utils.aoa_to_sheet(reference);

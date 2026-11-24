@@ -199,19 +199,21 @@ export async function importAdminEquipment(rows) {
 
   const existingKeys = new Set();
   const existingIds = new Set();
+  const existingNames = new Set();
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await supabase.from("equipment")
-      .select("id, equipment_type_code, unit_number, asset_id")
+      .select("id, equipment_type_code, unit_number, asset_id, name")
       .order("id").range(offset, offset + 499);
     if (error) throw new Error("Unable to check existing assets.");
     for (const asset of data) {
       existingKeys.add(importAssetKey(asset.equipment_type_code, asset.unit_number));
       if (asset.asset_id) existingIds.add(asset.asset_id.trim().toUpperCase());
+      if (asset.name) existingNames.add(asset.name.trim().toLowerCase());
     }
     if (data.length < 500) break;
   }
 
-  const lookups = { types: types.data, statuses: statuses.data, frequencies: frequencies.data, locations };
+  const lookups = { types: types.data, statuses: statuses.data, frequencies: frequencies.data, locations, names: existingNames };
   const results = [];
   for (const row of rows) {
     const rowNumber = Number(row?.rowNumber);
@@ -245,6 +247,7 @@ export async function importAdminEquipment(rows) {
       }
       existingKeys.add(key);
       existingIds.add(assetId);
+      existingNames.add(asset.name.trim().toLowerCase());
       results.push({ row: rowNumber, status: "Imported", message: assetId });
     } catch (error) {
       results.push({ row: rowNumber, status: "Rejected", message: userError(error, "Unable to save this asset.") });

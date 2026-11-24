@@ -1,12 +1,12 @@
 export const IMPORT_COLUMNS = [
-  "Asset Category Code",
+  "Asset Category",
   "Asset Type",
   "Asset Type Code",
   "Asset Name",
   "Site",
   "Room/Area",
-  "Status Code",
-  "AMC Frequency Code",
+  "Asset Status",
+  "AMC Preventive Maintenance Frequency",
   "AMC Date",
   "Capacity/Type",
   "Refill Date CO2",
@@ -27,6 +27,10 @@ function normalizedKey(value) {
   return normalized(value).toLowerCase();
 }
 
+function normalizedTypeCode(value) {
+  return normalized(value).normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 function isValidDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
@@ -45,31 +49,39 @@ export function validateImportRow(row, lookups) {
     if (cells[index] === "-") cells[index] = "";
   }
   if (cells.some((value) => value.length > 255)) return { error: "Cell values must not exceed 255 characters." };
-  const [categoryCode, equipmentType, typeCode, name, siteCode, roomArea, statusCode, frequencyCode, amcDate, capacity, refillCo2, refillDcp] = cells;
-  if (![categoryCode, equipmentType, typeCode, name, siteCode, roomArea, statusCode, frequencyCode, amcDate].every(Boolean)) {
+  const [category, equipmentType, typeCode, name, siteCode, roomArea, statusCode, frequencyCode, amcDate, capacity, refillCo2, refillDcp] = cells;
+  if (![category, equipmentType, typeCode, name, siteCode, roomArea, statusCode, frequencyCode, amcDate].every(Boolean)) {
     return { error: "Complete all required columns." };
   }
-  const type = lookups.types.find((item) => item.code.toLowerCase() === categoryCode.toLowerCase());
-  if (!type) return { error: "Unknown or inactive asset category code." };
-  if (normalizedKey(equipmentType) !== normalizedKey(type.name)) {
-    return { error: `Asset Type must match the category name for ${type.code} (${type.name}).` };
+  const categoryType = lookups.types.find((item) => normalizedKey(item.name) === normalizedKey(category));
+  if (!categoryType) return { error: "Asset category does not exist or is inactive. Add the category first." };
+  const type = lookups.types.find((item) => normalizedTypeCode(item.code) === normalizedTypeCode(equipmentType));
+  if (!type) {
+    const categoryCodes = lookups.types
+      .filter((item) => normalizedKey(item.name) === normalizedKey(category))
+      .map((item) => JSON.stringify(item.code))
+      .join(", ");
+    return { error: `Asset Type ${JSON.stringify(equipmentType)} does not match an active code. Active code(s) for ${JSON.stringify(category)}: ${categoryCodes}.` };
   }
-  const location = lookups.locations.find((item) =>
-    normalizedKey(item.site_code) === normalizedKey(siteCode)
-    && normalizedKey(item.room_area) === normalizedKey(roomArea),
-  );
-  if (!location) return { error: "Site and Room/Area must match an existing location." };
-  const status = lookups.statuses.find((item) => item.code.toLowerCase() === statusCode.toLowerCase());
-  if (!status) return { error: "Unknown or inactive status code." };
-  const frequency = lookups.frequencies.find((item) => item.code.toLowerCase() === frequencyCode.toLowerCase());
-  if (!frequency?.interval_days) return { error: "Unknown or inactive frequency, or frequency has no interval." };
-  if (!isValidDate(amcDate) || (refillCo2 && !isValidDate(refillCo2)) || (refillDcp && !isValidDate(refillDcp))) {
-    return { error: "Dates must be valid and use YYYY-MM-DD." };
+  if (normalizedKey(categoryType.name) !== normalizedKey(type.name)) {
+    return { error: "Asset Category and Asset Type must refer to the same equipment type." };
   }
+  if (lookups.names.has(normalizedKey(name))) return { error: "Asset Name already exists. Enter a unique asset name." };
+  const matchingSites = lookups.locations.filter((item) => normalizedKey(item.site_code) === normalizedKey(siteCode));
+  if (!matchingSites.length) return { error: "Site code does not exist. Add the site first." };
+  const location = matchingSites.find((item) => normalizedKey(item.room_area) === normalizedKey(roomArea)) ?? matchingSites[0];
+  const status = lookups.statuses.find((item) => normalizedKey(item.code) === normalizedKey(statusCode));
+  if (!status) return { error: "Asset status does not exist or is inactive. Add the status first." };
+  const frequency = lookups.frequencies.find((item) => normalizedKey(item.code) === normalizedKey(frequencyCode));
+  if (!frequency) return { error: "Frequency code does not exist or is inactive. Add the frequency first." };
+  if (!Number.isInteger(frequency.interval_days) || frequency.interval_days <= 0) return { error: "Frequency must have a positive interval in days." };
+  if (!isValidDate(amcDate)) return { error: "AMC Date must be a valid date in YYYY-MM-DD format." };
+  if (refillCo2 && !isValidDate(refillCo2)) return { error: "Refill Date CO2 must be a valid date in YYYY-MM-DD format." };
+  if (refillDcp && !isValidDate(refillDcp)) return { error: "Refill Date DCP must be a valid date in YYYY-MM-DD format." };
   const typeName = type.name?.trim().toLowerCase();
   const code = type.code.trim().toUpperCase();
   const isExtinguisher = typeName === "fire extinguisher" || code === "FE";
-  const hasCapacity = ["AC", "FET", "FP&WT"].includes(code) || typeName === "ac";
+  const hasCapacity = code === "AC" || typeName === "ac";
   if ((refillCo2 || refillDcp) && !isExtinguisher) return { error: "Refill dates are only available for fire extinguishers." };
   if (capacity && !hasCapacity) return { error: "Capacity/Type is not available for this asset category." };
   return {
