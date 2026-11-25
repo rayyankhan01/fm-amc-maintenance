@@ -16,6 +16,8 @@ import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
 import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
+import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
+import { getCurrentProfile } from "@/lib/auth";
 const sections = [
   {
     href: "/users",
@@ -63,10 +65,18 @@ const sections = [
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
-  const { due, overdue, newAssets, cancelledAlerts } =
-    await getInspectionAlerts(supabase);
+  const [{ due, overdue, newAssets, cancelledAlerts }, profile] = await Promise.all([
+    getInspectionAlerts(supabase),
+    getCurrentProfile(),
+  ]);
   const dashboardSections = [
     ...sections,
+    ...(profile?.emp_role === "admin" ? [{
+      href: "/import",
+      title: "Import",
+      description: "Import assets from a spreadsheet.",
+      icon: UploadFileOutlinedIcon,
+    }] : []),
     {
       href: "/alerts",
       title: "Alerts and notifications",

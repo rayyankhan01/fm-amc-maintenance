@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { userError } from "@/lib/userError";
+import { importAssetKey, validateImportRow } from "@/features/equipment/importValidation";
 
 async function requireAdmin() {
   await requireRole(["admin"]);
@@ -224,6 +225,89 @@ export async function createAdminEquipment(input) {
             ),
     };
   revalidatePath("/equipment");
+}
+
+export async function importAdminEquipment(rows) {
+  const supabase = await requireAdmin();
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > 10) {
+    throw new Error("Import batches must contain between 1 and 10 rows.");
+  }
+  const [types, statuses, frequencies] = await Promise.all([
+    supabase.from("equipment_types").select("id, code, name").eq("is_active", true),
+    supabase.from("status_values").select("code").eq("is_active", true),
+    supabase.from("maintenance_frequencies").select("code, interval_days").eq("is_active", true),
+  ]);
+  const lookupError = [types, statuses, frequencies].find((result) => result.error)?.error;
+  if (lookupError) throw new Error("Unable to load asset configuration.");
+
+  const locations = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("locations")
+      .select("id, site_code, site_name, room_area")
+      .order("id")
+      .range(offset, offset + 499);
+    if (error) throw new Error("Unable to load sites.");
+    locations.push(...data);
+    if (data.length < 500) break;
+  }
+
+  const existingKeys = new Set();
+  const existingIds = new Set();
+  const existingNames = new Set();
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("equipment")
+      .select("id, equipment_type_code, unit_number, asset_id, name")
+      .order("id").range(offset, offset + 499);
+    if (error) throw new Error("Unable to check existing assets.");
+    for (const asset of data) {
+      existingKeys.add(importAssetKey(asset.equipment_type_code, asset.unit_number));
+      if (asset.asset_id) existingIds.add(asset.asset_id.trim().toUpperCase());
+      if (asset.name) existingNames.add(asset.name.trim().toLowerCase());
+    }
+    if (data.length < 500) break;
+  }
+
+  const lookups = { types: types.data, statuses: statuses.data, frequencies: frequencies.data, locations, names: existingNames };
+  const results = [];
+  for (const row of rows) {
+    const rowNumber = Number(row?.rowNumber);
+    if (!Number.isSafeInteger(rowNumber) || rowNumber < 2) throw new Error("Invalid spreadsheet row number.");
+    const validation = validateImportRow(row.values, lookups);
+    if (validation.error) {
+      results.push({ row: rowNumber, status: "Rejected", message: validation.error });
+      continue;
+    }
+    const asset = validation.value;
+    try {
+      const { data: latestAsset, error: latestAssetError } = await supabase
+        .from("equipment")
+        .select("unit_number")
+        .eq("equipment_type_code", asset.equipment_type_code)
+        .order("unit_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestAssetError) throw latestAssetError;
+      asset.unit_number = (latestAsset?.unit_number ?? 0) + 1;
+      const key = importAssetKey(asset.equipment_type_code, asset.unit_number);
+      const assetId = equipmentAssetId(asset.site_code, asset.equipment_type_code, asset.unit_number).toUpperCase();
+      if (existingKeys.has(key) || existingIds.has(assetId)) {
+        results.push({ row: rowNumber, status: "Rejected", message: "Unable to assign a unique unit number. Please retry the import." });
+        continue;
+      }
+      const result = await createAdminEquipment(asset);
+      if (result?.error) {
+        results.push({ row: rowNumber, status: "Rejected", message: result.error });
+        continue;
+      }
+      existingKeys.add(key);
+      existingIds.add(assetId);
+      existingNames.add(asset.name.trim().toLowerCase());
+      results.push({ row: rowNumber, status: "Imported", message: assetId });
+    } catch (error) {
+      results.push({ row: rowNumber, status: "Rejected", message: userError(error, "Unable to save this asset.") });
+    }
+  }
+  return results;
 }
 
 export async function updateAdminEquipment(input) {
