@@ -14,7 +14,7 @@ export default function NewLocationPage() {
         initialValues={{ site_code: "", site_name: "", room_area: "" }}
         fields={[
           { name: "site_code", label: "Site Location" },
-          { name: "site_name", label: "Site Name", required: false },
+          { name: "site_name", label: "Site Name" },
           { name: "room_area", label: "Room/area", required: false },
         ]}
         submitLabel="Create location"
