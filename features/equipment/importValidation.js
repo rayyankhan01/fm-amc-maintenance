@@ -2,7 +2,7 @@ export const IMPORT_COLUMNS = [
   "Asset Category",
   "Asset Type",
   "Asset Type Code",
-  "Asset Name",
+  "Asset Id",
   "Site",
   "Room/Area",
   "Asset Status",

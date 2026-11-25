@@ -18,6 +18,7 @@ const valid = ["Air Conditioner", "AC", "SPAC", "Split AC", "W3", "Room 1", "OPE
 
 test("template validates category name, type code and site code", () => {
   assert.equal(IMPORT_COLUMNS.length, valid.length);
+  assert.equal(IMPORT_COLUMNS[3], "Asset Id");
   const result = validateImportRow(valid, lookups);
   assert.equal(result.value.capacity_type, "1.5 TON");
   assert.equal(result.value.equipment_type_id, "ac-id");
