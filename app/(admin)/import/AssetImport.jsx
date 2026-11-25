@@ -99,6 +99,30 @@ export default function AssetImport() {
 
   return (
     <Stack spacing={3}>
+            <Box>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+        <Typography variant="h6" gutterBottom>Excel Import Guidelines</Typography>
+        <Typography variant="body2">Please follow these guidelines before uploading the Excel file:</Typography>
+        <Box component="ul" sx={{ pl: 3, mb: 0 }}>
+          <Typography component="li" variant="body2">Download the Excel template and enter the asset details in the respective columns.</Typography>
+          <Typography component="li" variant="body2">All columns are mandatory except Capacity/Type, Refill Date CO2, and Refill Date DCP.</Typography>
+          <Typography component="li" variant="body2">Enter dates in YYYY-MM-DD format.</Typography>
+          <Typography component="li" variant="body2">Asset Category, Asset Type Code, Site Code and Asset Type must already be available in the application.</Typography>
+          <Typography component="li" variant="body2">Do not change the Excel column headers or template format.</Typography>
+          <Typography component="li" variant="body2">Ensure all mandatory fields are completed before uploading.</Typography>
+          <Typography component="li" variant="body2">Once completed, click Choose Spreadsheet to select the Excel file, then click Import Assets to upload.</Typography>
+        </Box>
+        </Alert>
+        <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Sample spreadsheet</Typography>
+        <Box sx={{ overflowX: "auto" }}>
+          <Box
+            component="img"
+            src="/AssetImport.png"
+            alt="Example asset import spreadsheet with three sample rows"
+            sx={{ display: "block", width: 1870, maxWidth: "none", height: "auto" }}
+          />
+        </Box>
+      </Box>
       <Box>
         <Button variant="outlined" startIcon={<DownloadOutlinedIcon />} onClick={downloadTemplate} disabled={busy}>
           Download template
@@ -128,31 +152,6 @@ export default function AssetImport() {
           </TableContainer>
         </Box>
       )}
-
-      <Box>
-        <Alert severity="warning" sx={{ mt: 2 }}>
-        <Typography variant="h6" gutterBottom>Excel Import Guidelines</Typography>
-        <Typography variant="body2">Please follow these guidelines before uploading the Excel file:</Typography>
-        <Box component="ul" sx={{ pl: 3, mb: 0 }}>
-          <Typography component="li" variant="body2">Download the Excel template and enter the asset details in the respective columns.</Typography>
-          <Typography component="li" variant="body2">All columns are mandatory except Capacity/Type, Refill Date CO2, and Refill Date DCP.</Typography>
-          <Typography component="li" variant="body2">Enter dates in YYYY-MM-DD format.</Typography>
-          <Typography component="li" variant="body2">Asset Category, Asset Type Code, Site Code and Asset Type must already be available in the application.</Typography>
-          <Typography component="li" variant="body2">Do not change the Excel column headers or template format.</Typography>
-          <Typography component="li" variant="body2">Ensure all mandatory fields are completed before uploading.</Typography>
-          <Typography component="li" variant="body2">Once completed, click Choose Spreadsheet to select the Excel file, then click Import Assets to upload.</Typography>
-        </Box>
-        </Alert>
-        <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Sample spreadsheet</Typography>
-        <Box sx={{ overflowX: "auto" }}>
-          <Box
-            component="img"
-            src="/AssetImport.png"
-            alt="Example asset import spreadsheet with three sample rows"
-            sx={{ display: "block", width: 1870, maxWidth: "none", height: "auto" }}
-          />
-        </Box>
-      </Box>
     </Stack>
   );
 }
