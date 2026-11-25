@@ -8,7 +8,7 @@ import {
   Alert, Box, Button, LinearProgress, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Typography,
 } from "@mui/material";
-import { importAdminEquipment } from "@/features/admin/commands";
+import { importAdminEquipment, startAdminEquipmentImport } from "@/features/admin/commands";
 import { IMPORT_COLUMNS, IMPORT_LIMIT } from "@/features/equipment/importValidation";
 
 const DATE_COLUMNS = new Set([8, 10, 11]);
@@ -20,11 +20,11 @@ function dateCell(value, date1904) {
   }
   if (typeof value !== "number") return value;
   const date = XLSX.SSF.parse_date_code(value, { date1904 });
-  if (!date) return "Invalid date";
+  if (!date) return String(value);
   return `${String(date.y).padStart(4, "0")}-${String(date.m).padStart(2, "0")}-${String(date.d).padStart(2, "0")}`;
 }
 
-export default function AssetImport({ types, statuses, frequencies }) {
+export default function AssetImport() {
   const [file, setFile] = useState(null);
   const [results, setResults] = useState([]);
   const [error, setError] = useState("");
@@ -36,21 +36,6 @@ export default function AssetImport({ types, statuses, frequencies }) {
     const sheet = XLSX.utils.aoa_to_sheet([IMPORT_COLUMNS]);
     sheet["!cols"] = IMPORT_COLUMNS.map((column) => ({ wch: Math.max(column.length + 3, 18) }));
     XLSX.utils.book_append_sheet(workbook, sheet, "Assets");
-    const reference = [
-      ["Asset Category Code", "Asset Category", "Status Code", "Status", "AMC Frequency Code", "AMC Frequency"],
-      ...Array.from({ length: Math.max(types.length, statuses.length, frequencies.length) }, (_, index) => [
-        types[index]?.code ?? "", types[index]?.name ?? "", statuses[index]?.code ?? "",
-        statuses[index]?.label ?? "", frequencies[index]?.code ?? "", frequencies[index]?.label ?? "",
-      ]),
-      [],
-      ["AMC Date, Refill Date CO2 and Refill Date DCP: YYYY-MM-DD or Excel dates."],
-      ["Asset Category: category name. Asset Type: category code. Site: existing site code."],
-      ["Capacity/Type: AC only. Refill dates: fire extinguishers only."],
-      ["Unit Number is assigned automatically per Asset Type Code. Capacity/Type and refill dates are optional; all other columns are required."],
-    ];
-    const referenceSheet = XLSX.utils.aoa_to_sheet(reference);
-    referenceSheet["!cols"] = Array.from({ length: 6 }, () => ({ wch: 24 }));
-    XLSX.utils.book_append_sheet(workbook, referenceSheet, "Reference");
     XLSX.writeFile(workbook, "asset-import-template.xls", { bookType: "biff8" });
   }
 
@@ -60,11 +45,11 @@ export default function AssetImport({ types, statuses, frequencies }) {
     setResults([]);
     setProgress(0);
     if (!file || !/\.(xls|xlsx)$/i.test(file.name)) {
-      setError("Select an .xls or .xlsx file.");
+      setError(`Spreadsheet [${file?.name ?? "none"}]: Select an .xls or .xlsx file.`);
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setError("The spreadsheet must be 2 MB or smaller.");
+      setError(`Spreadsheet [${file.name}] must be 2 MB or smaller.`);
       return;
     }
     setBusy(true);
@@ -72,14 +57,18 @@ export default function AssetImport({ types, statuses, frequencies }) {
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, sheetRows: IMPORT_LIMIT + 2 });
       const sheet = workbook.Sheets["Assets"];
-      if (!sheet || !sheet["!ref"]) throw new Error("The workbook must contain an Assets sheet from the template.");
+      if (!sheet || !sheet["!ref"]) throw new Error(`Spreadsheet [${file.name}] must contain an Assets sheet from the template.`);
       const fullRange = XLSX.utils.decode_range(sheet["!fullref"] || sheet["!ref"]);
-      if (fullRange.e.r > IMPORT_LIMIT) throw new Error(`The workbook can contain at most ${IMPORT_LIMIT} asset rows.`);
-      if (fullRange.e.c >= IMPORT_COLUMNS.length) throw new Error("Remove columns that are not in the template.");
+      if (fullRange.e.r > IMPORT_LIMIT) throw new Error(`Spreadsheet [${file.name}] contains ${fullRange.e.r} asset rows; the maximum is ${IMPORT_LIMIT}.`);
+      if (fullRange.e.c >= IMPORT_COLUMNS.length) throw new Error(`Spreadsheet [${file.name}] contains extra columns. Remove columns that are not in the template.`);
       const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "", blankrows: true });
       const headers = grid[0] ?? [];
-      if (headers.length !== IMPORT_COLUMNS.length || IMPORT_COLUMNS.some((column, index) => String(headers[index] ?? "").trim() !== column)) {
-        throw new Error("The Assets sheet headers must match the downloaded template.");
+      const mismatchedHeader = IMPORT_COLUMNS.findIndex((column, index) => String(headers[index] ?? "").trim() !== column);
+      if (mismatchedHeader !== -1) {
+        throw new Error(`Column header [${String(headers[mismatchedHeader] ?? "").trim() || "empty"}] must be [${IMPORT_COLUMNS[mismatchedHeader]}].`);
+      }
+      if (headers.length !== IMPORT_COLUMNS.length) {
+        throw new Error(`Spreadsheet [${file.name}] headers must match the downloaded template.`);
       }
       const rows = [];
       const date1904 = Boolean(workbook.Workbook?.WBProps?.date1904);
@@ -87,14 +76,16 @@ export default function AssetImport({ types, statuses, frequencies }) {
         const values = Array.from({ length: IMPORT_COLUMNS.length }, (_, column) => grid[index]?.[column] ?? "");
         if (values.every((value) => String(value).trim() === "")) continue;
         for (let column = 0; column < IMPORT_COLUMNS.length; column += 1) {
-          if (sheet[XLSX.utils.encode_cell({ r: index, c: column })]?.f) throw new Error(`Row ${index + 1} contains a formula. Use plain values instead.`);
+          const formula = sheet[XLSX.utils.encode_cell({ r: index, c: column })]?.f;
+          if (formula) throw new Error(`Row ${index + 1}, ${IMPORT_COLUMNS[column]} [=${formula}] contains a formula. Use plain values instead.`);
           if (DATE_COLUMNS.has(column)) values[column] = dateCell(values[column], date1904);
         }
         rows.push({ rowNumber: index + 1, values });
       }
-      if (!rows.length) throw new Error("The spreadsheet does not contain any asset rows.");
+      if (!rows.length) throw new Error(`Spreadsheet [${file.name}] does not contain any asset rows.`);
+      const importBatchNo = await startAdminEquipmentImport();
       for (let index = 0; index < rows.length; index += 10) {
-        const batch = await importAdminEquipment(rows.slice(index, index + 10));
+        const batch = await importAdminEquipment(rows.slice(index, index + 10), importBatchNo);
         completed += batch.length;
         setResults((current) => [...current, ...batch]);
         setProgress(Math.round((completed / rows.length) * 100));
@@ -108,6 +99,30 @@ export default function AssetImport({ types, statuses, frequencies }) {
 
   return (
     <Stack spacing={3}>
+            <Box>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+        <Typography variant="h6" gutterBottom>Excel Import Guidelines</Typography>
+        <Typography variant="body2">Please follow these guidelines before uploading the Excel file:</Typography>
+        <Box component="ul" sx={{ pl: 3, mb: 0 }}>
+          <Typography component="li" variant="body2">Download the Excel template and enter the asset details in the respective columns.</Typography>
+          <Typography component="li" variant="body2">All columns are mandatory except Capacity/Type, Refill Date CO2, and Refill Date DCP.</Typography>
+          <Typography component="li" variant="body2">Enter dates in YYYY-MM-DD format.</Typography>
+          <Typography component="li" variant="body2">Asset Category, Asset Type Code, Site Code and Asset Type must already be available in the application.</Typography>
+          <Typography component="li" variant="body2">Do not change the Excel column headers or template format.</Typography>
+          <Typography component="li" variant="body2">Ensure all mandatory fields are completed before uploading.</Typography>
+          <Typography component="li" variant="body2">Once completed, click Choose Spreadsheet to select the Excel file, then click Import Assets to upload.</Typography>
+        </Box>
+        </Alert>
+        <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Sample spreadsheet</Typography>
+        <Box sx={{ overflowX: "auto" }}>
+          <Box
+            component="img"
+            src="/AssetImport.png"
+            alt="Example asset import spreadsheet with three sample rows"
+            sx={{ display: "block", width: 1870, maxWidth: "none", height: "auto" }}
+          />
+        </Box>
+      </Box>
       <Box>
         <Button variant="outlined" startIcon={<DownloadOutlinedIcon />} onClick={downloadTemplate} disabled={busy}>
           Download template
