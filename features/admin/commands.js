@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { userError } from "@/lib/userError";
-import { createEquipmentImportBatch, getNextUnitNumber, isEquipmentImportBatchOwner } from "@/features/equipment/api";
-import { importAssetKey, validateImportRow } from "@/features/equipment/importValidation";
+import { importErrorDetails, userError } from "@/lib/userError";
+import { getImportLimit } from "@/features/equipment/importConfig";
+import { validateImportRows } from "@/features/equipment/importValidation";
 
 async function requireAdmin() {
   await requireRole(["admin"]);
@@ -94,11 +94,15 @@ async function siteConflict(supabase, siteCode, siteName, excludeId = null) {
     .select("id,site_code,site_name");
 
   if (error) throw error;
+  return findSiteConflict(data ?? [], siteCode, siteName, excludeId);
+}
+
+function findSiteConflict(rows, siteCode, siteName, excludeId = null) {
   const code = siteCode.trim().toUpperCase();
   const name = siteName.trim().toLowerCase();
   let existingName = null;
 
-  for (const row of data ?? []) {
+  for (const row of rows) {
     if (row.id === excludeId) continue;
     const rowCode = String(row.site_code ?? "-")
       .trim()
@@ -169,13 +173,17 @@ function equipmentInput(input) {
   };
 }
 
-async function addNextAmcDate(supabase, values, frequencyCode) {
-  const { data: frequency, error } = await supabase
-    .from("maintenance_frequencies")
-    .select("interval_days")
-    .eq("code", required(frequencyCode, "AMC frequency"))
-    .single();
-  if (error) throw error;
+async function addNextAmcDate(supabase, values, frequencyCode, knownFrequency = null) {
+  let frequency = knownFrequency;
+  if (!frequency) {
+    const result = await supabase
+      .from("maintenance_frequencies")
+      .select("interval_days")
+      .eq("code", required(frequencyCode, "AMC frequency"))
+      .single();
+    if (result.error) throw result.error;
+    frequency = result.data;
+  }
   if (!frequency.interval_days) {
     throw new Error(
       "The selected AMC frequency must have an interval in days.",
@@ -222,25 +230,28 @@ async function saveAdminEquipment(supabase, input, importBatchNo = null) {
       location_id: locationId,
       import_batch_no: importBatchNo,
     });
-  if (error) return { error: error.code === "23505"
-    ? "An asset record with these details already exists."
-    : userError(error, "Unable to save this asset. Please check the details and try again.") };
+  if (error) {
+    if (importBatchNo !== null) throw error;
+    return { error: error.code === "23505"
+      ? "An asset record with these details already exists."
+      : userError(error, "Unable to save this asset. Please check the details and try again.") };
+  }
   revalidatePath("/equipment");
 }
 
-export async function startAdminEquipmentImport() {
+export async function importAdminEquipment(rows) {
   const profile = await requireRole(["admin"]);
-  return createEquipmentImportBatch(createAdminClient(), profile.id);
+  try {
+    return await importEquipmentRows(createAdminClient(), profile.id, rows);
+  } catch (error) {
+    return { error: importErrorDetails(error) };
+  }
 }
 
-export async function importAdminEquipment(rows, importBatchNo) {
-  const profile = await requireRole(["admin"]);
-  const supabase = createAdminClient();
-  if (!Array.isArray(rows) || rows.length < 1 || rows.length > 10) {
-    throw new Error("Import batches must contain between 1 and 10 rows.");
-  }
-  if (!await isEquipmentImportBatchOwner(supabase, importBatchNo, profile.id)) {
-    throw new Error("Invalid import batch.");
+async function importEquipmentRows(supabase, profileId, rows) {
+  const importLimit = getImportLimit();
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > importLimit) {
+    throw new Error(`Import batches must contain between 1 and ${importLimit} rows.`);
   }
   const [types, statuses, frequencies] = await Promise.all([
     supabase.from("equipment_types").select("id, code, name, is_active"),
@@ -248,7 +259,7 @@ export async function importAdminEquipment(rows, importBatchNo) {
     supabase.from("maintenance_frequencies").select("code, interval_days").eq("is_active", true),
   ]);
   const lookupError = [types, statuses, frequencies].find((result) => result.error)?.error;
-  if (lookupError) throw new Error("Unable to load asset configuration.");
+  if (lookupError) throw lookupError;
 
   const locations = [];
   for (let offset = 0; ; offset += 500) {
@@ -256,57 +267,35 @@ export async function importAdminEquipment(rows, importBatchNo) {
       .select("id, site_code, site_name, room_area")
       .order("id")
       .range(offset, offset + 499);
-    if (error) throw new Error("Unable to load sites.");
+    if (error) throw error;
     locations.push(...data);
     if (data.length < 500) break;
   }
 
-  const existingKeys = new Set();
-  const existingIds = new Set();
-  for (let offset = 0; ; offset += 500) {
-    const { data, error } = await supabase.from("equipment")
-      .select("id, equipment_type_code, unit_number, asset_id")
-      .order("id").range(offset, offset + 499);
-    if (error) throw new Error("Unable to check existing assets.");
-    for (const asset of data) {
-      existingKeys.add(importAssetKey(asset.equipment_type_code, asset.unit_number));
-      if (asset.asset_id) existingIds.add(asset.asset_id.trim().toUpperCase());
-    }
-    if (data.length < 500) break;
-  }
-
   const lookups = { types: types.data.filter((type) => type.is_active), typeCodes: types.data, statuses: statuses.data, frequencies: frequencies.data, locations };
-  const results = [];
-  for (const row of rows) {
-    const rowNumber = Number(row?.rowNumber);
-    if (!Number.isSafeInteger(rowNumber) || rowNumber < 2) throw new Error("Invalid spreadsheet row number.");
-    const validation = validateImportRow(row.values, lookups);
-    if (validation.error) {
-      results.push({ row: rowNumber, status: "Rejected", message: validation.error });
-      continue;
-    }
-    const asset = validation.value;
+  const { assets, errors } = validateImportRows(rows, lookups);
+  if (errors.length) return { results: errors, error: "No assets were imported. Correct the rejected rows and try again." };
+
+  const prepared = [];
+  for (const { row, asset } of assets) {
     try {
-      asset.unit_number = await getNextUnitNumber(supabase, asset.equipment_type_code);
-      const key = importAssetKey(asset.equipment_type_code, asset.unit_number);
-      const assetId = equipmentAssetId(asset.site_code, asset.equipment_type_code, asset.unit_number);
-      if (existingKeys.has(key) || existingIds.has(assetId.toUpperCase())) {
-        results.push({ row: rowNumber, status: "Rejected", message: `Asset Name [${asset.name}]: Unable to assign unique Asset ID [${assetId}]. Please retry the import.` });
-        continue;
-      }
-      const result = await saveAdminEquipment(supabase, asset, importBatchNo);
-      if (result?.error) {
-        results.push({ row: rowNumber, status: "Rejected", message: `Asset Name [${asset.name}]: ${result.error}` });
-        continue;
-      }
-      existingKeys.add(key);
-      existingIds.add(assetId.toUpperCase());
-      results.push({ row: rowNumber, status: "Imported", message: assetId });
+      const location = locationValues(asset);
+      const { conflict, existingName } = findSiteConflict(locations, location.site_code, location.site_name);
+      if (conflict) throw new Error(conflict);
+      if (existingName) location.site_name = existingName;
+      const frequency = frequencies.data.find((item) => item.code === asset.amc_frequency);
+      const values = await addNextAmcDate(supabase, equipmentInput(asset), asset.amc_frequency, frequency);
+      prepared.push({ row, location, values });
     } catch (error) {
-      results.push({ row: rowNumber, status: "Rejected", message: `Asset Name [${asset.name}]: ${userError(error, "Unable to save this asset.")}` });
+      errors.push({ row, status: "Rejected", message: `Asset Name [${asset.name}]: ${importErrorDetails(error)}` });
     }
   }
-  return results;
+  if (errors.length) return { results: errors, error: "No assets were imported. Correct the rejected rows and try again." };
+
+  const { data, error } = await supabase.rpc("import_equipment_batch", { p_created_by: profileId, p_rows: prepared });
+  if (error) throw error;
+  revalidatePath("/equipment");
+  return { results: data };
 }
 
 export async function updateAdminEquipment(input) {
