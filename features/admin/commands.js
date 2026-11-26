@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { userError } from "@/lib/userError";
-import { importAssetKey, validateImportRow } from "@/features/equipment/importValidation";
+import {
+  importAssetKey,
+  validateImportRow,
+} from "@/features/equipment/importValidation";
+import { ASSET_NAME_CATEGORIES } from "@/features/equipment/assetNameCategories";
 
 async function requireAdmin() {
   await requireRole(["admin"]);
@@ -439,25 +443,45 @@ export async function deleteLocation(id) {
 }
 export async function createEquipmentType(input) {
   const supabase = await requireAdmin();
+  const name = required(input.name, "Name");
+  if (!ASSET_NAME_CATEGORIES.includes(name)) {
+    return { error: "Choose a name from the list." };
+  }
   const { error } = await supabase.from("equipment_types").insert({
     code: required(input.code, "Code").toUpperCase(),
-    name: required(input.name, "Name"),
+    name,
   });
-  if (error) return { error: userError(error, "Unable to save this asset type. Please try again.") };
+  if (error)
+    return {
+      error: userError(
+        error,
+        "Unable to save this asset type. Please try again.",
+      ),
+    };
   revalidatePath("/equipment-types");
 }
 
 export async function updateEquipmentType(input) {
   const supabase = await requireAdmin();
+  const name = required(input.name, "Name");
+  if (!ASSET_NAME_CATEGORIES.includes(name)) {
+    return { error: "Choose a name from the list." };
+  }
   const { error } = await supabase
     .from("equipment_types")
     .update({
       code: required(input.code, "Code").toUpperCase(),
-      name: required(input.name, "Name"),
+      name,
       is_active: input.is_active !== false,
     })
     .eq("id", input.id);
-  if (error) return { error: userError(error, "Unable to save this asset type. Please try again.") };
+  if (error)
+    return {
+      error: userError(
+        error,
+        "Unable to save this asset type. Please try again.",
+      ),
+    };
   revalidatePath("/equipment-types");
 }
 
