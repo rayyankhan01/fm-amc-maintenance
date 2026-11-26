@@ -3,11 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { userError } from "@/lib/userError";
-import {
-  importAssetKey,
-  validateImportRow,
-} from "@/features/equipment/importValidation";
+import { importErrorDetails, userError } from "@/lib/userError";
+import { getImportLimit } from "@/features/equipment/importConfig";
+import { validateImportRows } from "@/features/equipment/importValidation";
 import { ASSET_NAME_CATEGORIES } from "@/features/equipment/assetNameCategories";
 
 async function requireAdmin() {
@@ -44,14 +42,14 @@ function positiveInterval(value) {
   return interval;
 }
 
-const DUPLICATE_LOCATION_MESSAGE = "This location already exists (same site location, site name and room/area).";
+const DUPLICATE_LOCATION_MESSAGE =
+  "This location already exists (same site location, site name and room/area).";
 
 function locationKey(siteCode, siteName, roomArea) {
   return [siteCode, siteName ?? "", roomArea ?? ""]
     .map((value) => String(value).trim().toLowerCase())
     .join("|");
 }
-
 
 async function findLocationId(
   supabase,
@@ -97,11 +95,15 @@ async function siteConflict(supabase, siteCode, siteName, excludeId = null) {
     .select("id,site_code,site_name");
 
   if (error) throw error;
+  return findSiteConflict(data ?? [], siteCode, siteName, excludeId);
+}
+
+function findSiteConflict(rows, siteCode, siteName, excludeId = null) {
   const code = siteCode.trim().toUpperCase();
   const name = siteName.trim().toLowerCase();
   let existingName = null;
 
-  for (const row of data ?? []) {
+  for (const row of rows) {
     if (row.id === excludeId) continue;
     const rowCode = String(row.site_code ?? "-")
       .trim()
@@ -144,7 +146,7 @@ async function findOrCreateAdminLocation(supabase, input) {
     .insert(values)
     .select("id")
     .single();
-  
+
   if (error?.code === "23505") return findLocationId(supabase, ...lookup);
   if (error) throw error;
   return data.id;
@@ -172,13 +174,22 @@ function equipmentInput(input) {
   };
 }
 
-async function addNextAmcDate(supabase, values, frequencyCode) {
-  const { data: frequency, error } = await supabase
-    .from("maintenance_frequencies")
-    .select("interval_days")
-    .eq("code", required(frequencyCode, "AMC frequency"))
-    .single();
-  if (error) throw error;
+async function addNextAmcDate(
+  supabase,
+  values,
+  frequencyCode,
+  knownFrequency = null,
+) {
+  let frequency = knownFrequency;
+  if (!frequency) {
+    const result = await supabase
+      .from("maintenance_frequencies")
+      .select("interval_days")
+      .eq("code", required(frequencyCode, "AMC frequency"))
+      .single();
+    if (result.error) throw result.error;
+    frequency = result.data;
+  }
   if (!frequency.interval_days) {
     throw new Error(
       "The selected AMC frequency must have an interval in days.",
@@ -195,6 +206,10 @@ function equipmentAssetId(siteCode, equipmentTypeCode, unitNumber) {
 
 export async function createAdminEquipment(input) {
   const supabase = await requireAdmin();
+  return saveAdminEquipment(supabase, input);
+}
+
+async function saveAdminEquipment(supabase, input, importBatchNo = null) {
   const locationId = await findOrCreateAdminLocation(supabase, input);
   const values = await addNextAmcDate(
     supabase,
@@ -217,8 +232,10 @@ export async function createAdminEquipment(input) {
       values.unit_number,
     ),
     location_id: locationId,
+    import_batch_no: importBatchNo,
   });
-  if (error)
+  if (error) {
+    if (importBatchNo !== null) throw error;
     return {
       error:
         error.code === "23505"
@@ -228,90 +245,108 @@ export async function createAdminEquipment(input) {
               "Unable to save this asset. Please check the details and try again.",
             ),
     };
+  }
   revalidatePath("/equipment");
 }
 
 export async function importAdminEquipment(rows) {
-  const supabase = await requireAdmin();
-  if (!Array.isArray(rows) || rows.length < 1 || rows.length > 10) {
-    throw new Error("Import batches must contain between 1 and 10 rows.");
+  const profile = await requireRole(["admin"]);
+  try {
+    return await importEquipmentRows(createAdminClient(), profile.id, rows);
+  } catch (error) {
+    return { error: importErrorDetails(error) };
+  }
+}
+
+async function importEquipmentRows(supabase, profileId, rows) {
+  const importLimit = getImportLimit();
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > importLimit) {
+    throw new Error(
+      `Import batches must contain between 1 and ${importLimit} rows.`,
+    );
   }
   const [types, statuses, frequencies] = await Promise.all([
-    supabase.from("equipment_types").select("id, code, name").eq("is_active", true),
+    supabase.from("equipment_types").select("id, code, name, is_active"),
     supabase.from("status_values").select("code").eq("is_active", true),
-    supabase.from("maintenance_frequencies").select("code, interval_days").eq("is_active", true),
+    supabase
+      .from("maintenance_frequencies")
+      .select("code, interval_days")
+      .eq("is_active", true),
   ]);
-  const lookupError = [types, statuses, frequencies].find((result) => result.error)?.error;
-  if (lookupError) throw new Error("Unable to load asset configuration.");
+  const lookupError = [types, statuses, frequencies].find(
+    (result) => result.error,
+  )?.error;
+  if (lookupError) throw lookupError;
 
   const locations = [];
   for (let offset = 0; ; offset += 500) {
-    const { data, error } = await supabase.from("locations")
+    const { data, error } = await supabase
+      .from("locations")
       .select("id, site_code, site_name, room_area")
       .order("id")
       .range(offset, offset + 499);
-    if (error) throw new Error("Unable to load sites.");
+    if (error) throw error;
     locations.push(...data);
     if (data.length < 500) break;
   }
 
-  const existingKeys = new Set();
-  const existingIds = new Set();
-  const existingNames = new Set();
-  for (let offset = 0; ; offset += 500) {
-    const { data, error } = await supabase.from("equipment")
-      .select("id, equipment_type_code, unit_number, asset_id, name")
-      .order("id").range(offset, offset + 499);
-    if (error) throw new Error("Unable to check existing assets.");
-    for (const asset of data) {
-      existingKeys.add(importAssetKey(asset.equipment_type_code, asset.unit_number));
-      if (asset.asset_id) existingIds.add(asset.asset_id.trim().toUpperCase());
-      if (asset.name) existingNames.add(asset.name.trim().toLowerCase());
-    }
-    if (data.length < 500) break;
-  }
+  const lookups = {
+    types: types.data.filter((type) => type.is_active),
+    statuses: statuses.data,
+    frequencies: frequencies.data,
+    locations,
+  };
+  const { assets, errors } = validateImportRows(rows, lookups);
+  if (errors.length)
+    return {
+      results: errors,
+      error:
+        "No assets were imported. Correct the rejected rows and try again.",
+    };
 
-  const lookups = { types: types.data, statuses: statuses.data, frequencies: frequencies.data, locations, names: existingNames };
-  const results = [];
-  for (const row of rows) {
-    const rowNumber = Number(row?.rowNumber);
-    if (!Number.isSafeInteger(rowNumber) || rowNumber < 2) throw new Error("Invalid spreadsheet row number.");
-    const validation = validateImportRow(row.values, lookups);
-    if (validation.error) {
-      results.push({ row: rowNumber, status: "Rejected", message: validation.error });
-      continue;
-    }
-    const asset = validation.value;
+  const prepared = [];
+  for (const { row, asset } of assets) {
     try {
-      const { data: latestAsset, error: latestAssetError } = await supabase
-        .from("equipment")
-        .select("unit_number")
-        .eq("equipment_type_code", asset.equipment_type_code)
-        .order("unit_number", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (latestAssetError) throw latestAssetError;
-      asset.unit_number = (latestAsset?.unit_number ?? 0) + 1;
-      const key = importAssetKey(asset.equipment_type_code, asset.unit_number);
-      const assetId = equipmentAssetId(asset.site_code, asset.equipment_type_code, asset.unit_number).toUpperCase();
-      if (existingKeys.has(key) || existingIds.has(assetId)) {
-        results.push({ row: rowNumber, status: "Rejected", message: "Unable to assign a unique unit number. Please retry the import." });
-        continue;
-      }
-      const result = await createAdminEquipment(asset);
-      if (result?.error) {
-        results.push({ row: rowNumber, status: "Rejected", message: result.error });
-        continue;
-      }
-      existingKeys.add(key);
-      existingIds.add(assetId);
-      existingNames.add(asset.name.trim().toLowerCase());
-      results.push({ row: rowNumber, status: "Imported", message: assetId });
+      const location = locationValues(asset);
+      const { conflict, existingName } = findSiteConflict(
+        locations,
+        location.site_code,
+        location.site_name,
+      );
+      if (conflict) throw new Error(conflict);
+      if (existingName) location.site_name = existingName;
+      const frequency = frequencies.data.find(
+        (item) => item.code === asset.amc_frequency,
+      );
+      const values = await addNextAmcDate(
+        supabase,
+        equipmentInput(asset),
+        asset.amc_frequency,
+        frequency,
+      );
+      prepared.push({ row, location, values });
     } catch (error) {
-      results.push({ row: rowNumber, status: "Rejected", message: userError(error, "Unable to save this asset.") });
+      errors.push({
+        row,
+        status: "Rejected",
+        message: `Asset Name [${asset.name}]: ${importErrorDetails(error)}`,
+      });
     }
   }
-  return results;
+  if (errors.length)
+    return {
+      results: errors,
+      error:
+        "No assets were imported. Correct the rejected rows and try again.",
+    };
+
+  const { data, error } = await supabase.rpc("import_equipment_batch", {
+    p_created_by: profileId,
+    p_rows: prepared,
+  });
+  if (error) throw error;
+  revalidatePath("/equipment");
+  return { results: data };
 }
 
 export async function updateAdminEquipment(input) {
@@ -433,9 +468,10 @@ export async function deleteLocation(id) {
   const { error } = await supabase.from("locations").delete().eq("id", id);
   if (error) {
     return {
-      error: error.code === "23503"
-        ? "This location cannot be deleted because it is linked to assets or movement history."
-        : "Could not delete this location. Please try again.",
+      error:
+        error.code === "23503"
+          ? "This location cannot be deleted because it is linked to assets or movement history."
+          : "Could not delete this location. Please try again.",
     };
   }
   revalidatePath("/locations");
@@ -514,7 +550,10 @@ export async function createStatusValue(input) {
     label: required(input.label, "Label"),
     sort_order: Number(input.sort_order) || 0,
   });
-  if (error) return { error: userError(error, "Unable to save this status. Please try again.") };
+  if (error)
+    return {
+      error: userError(error, "Unable to save this status. Please try again."),
+    };
   revalidatePath("/configuration");
   revalidatePath("/statuses");
 }
@@ -530,7 +569,10 @@ export async function updateStatusValue(input) {
       is_active: input.is_active !== false,
     })
     .eq("id", input.id);
-  if (error) return { error: userError(error, "Unable to save this status. Please try again.") };
+  if (error)
+    return {
+      error: userError(error, "Unable to save this status. Please try again."),
+    };
   revalidatePath("/configuration");
   revalidatePath("/statuses");
 }
@@ -553,7 +595,13 @@ export async function createMaintenanceFrequency(input) {
     label: required(input.label, "Label"),
     interval_days: positiveInterval(input.interval_days),
   });
-  if (error) return { error: userError(error, "Unable to save this frequency. Please try again.") };
+  if (error)
+    return {
+      error: userError(
+        error,
+        "Unable to save this frequency. Please try again.",
+      ),
+    };
   revalidatePath("/configuration");
   revalidatePath("/frequencies");
 }
@@ -569,7 +617,13 @@ export async function updateMaintenanceFrequency(input) {
       is_active: input.is_active !== false,
     })
     .eq("id", input.id);
-  if (error) return { error: userError(error, "Unable to save this frequency. Please try again.") };
+  if (error)
+    return {
+      error: userError(
+        error,
+        "Unable to save this frequency. Please try again.",
+      ),
+    };
   revalidatePath("/configuration");
   revalidatePath("/frequencies");
 }
@@ -611,9 +665,17 @@ export async function createSystemUser(input) {
       password,
       email_confirm: true,
     });
-  if (authError) return { error: authError.code === "email_exists" || authError.code === "user_already_exists"
-    ? "An account with this employee ID already exists."
-    : userError(authError, "Unable to create this user. Please check the details and try again.") };
+  if (authError)
+    return {
+      error:
+        authError.code === "email_exists" ||
+        authError.code === "user_already_exists"
+          ? "An account with this employee ID already exists."
+          : userError(
+              authError,
+              "Unable to create this user. Please check the details and try again.",
+            ),
+    };
 
   const { error: profileError } = await supabase.from("profiles").insert({
     id: authUser.user.id,
@@ -624,7 +686,10 @@ export async function createSystemUser(input) {
 
   if (profileError) {
     await supabase.auth.admin.deleteUser(authUser.user.id);
-    return { error: "Unable to finish creating this user. Please contact an administrator before trying again." };
+    return {
+      error:
+        "Unable to finish creating this user. Please contact an administrator before trying again.",
+    };
   }
 
   revalidatePath("/users");
@@ -639,7 +704,10 @@ export async function updateSystemUser(input) {
       emp_role: requiredUserRole(input.emp_role),
     })
     .eq("id", input.id);
-  if (error) return { error: userError(error, "Unable to save this user. Please try again.") };
+  if (error)
+    return {
+      error: userError(error, "Unable to save this user. Please try again."),
+    };
   revalidatePath("/users");
 }
 

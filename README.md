@@ -16,6 +16,8 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+Set `ASSET_IMPORT_LIMIT` in `.env` to the maximum number of asset rows per import. It defaults to 200 when unset. Configure the same variable in Vercel for deployed environments; the existing 2 MB spreadsheet and 4 MB server-action request limits still apply.
+
 You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

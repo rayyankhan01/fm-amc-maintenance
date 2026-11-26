@@ -93,6 +93,29 @@ export async function getNextUnitNumber(supabase, equipmentTypeCode) {
     .limit(1)
     .maybeSingle();
 
+    if (error) throw error;
+    return (data?.unit_number ?? 0 ) +1 ;
+
+}
+
+export async function createEquipmentImportBatch(supabase, profileId) {
+  const { data, error } = await supabase
+    .from('equipment_import_batches')
+    .insert({ created_by: profileId })
+    .select('batch_no')
+    .single();
   if (error) throw error;
-  return (data?.unit_number ?? 0) + 1;
+  return data.batch_no;
+}
+
+export async function isEquipmentImportBatchOwner(supabase, batchNo, profileId) {
+  if (!Number.isSafeInteger(batchNo) || batchNo < 1) return false;
+  const { data, error } = await supabase
+    .from('equipment_import_batches')
+    .select('batch_no')
+    .eq('batch_no', batchNo)
+    .eq('created_by', profileId)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
 }
