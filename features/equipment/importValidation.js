@@ -89,12 +89,12 @@ export function validateImportRow(row, lookups) {
   const typeName = type.name?.trim().toLowerCase();
   const code = type.code.trim().toUpperCase();
   const isExtinguisher = typeName === "fire extinguisher" || code === "FE";
-  const hasCapacity = ["fet", "fp", "ac"].includes(normalizedTypeCode(assetTypeCode.code));
+  const hasCapacity = ["fet", "fp", "ac"].includes(normalizedTypeCode(equipmentType));
   if ((refillCo2 || refillDcp) && !isExtinguisher) {
     const refillValues = [refillCo2 && fieldValue("Refill Date CO2", refillCo2), refillDcp && fieldValue("Refill Date DCP", refillDcp)].filter(Boolean);
     return { error: `${refillValues.join(", ")} only available for fire extinguishers; ${fieldValue("Asset Type", equipmentType)} is not a fire extinguisher.` };
   }
-  if (capacity && !hasCapacity) return { error: `${fieldValue("Capacity/Type", capacity)} is only available for Asset Type Codes FET, FP, and AC; received ${fieldValue("Asset Type Code", typeCode)}.` };
+  if (capacity && !hasCapacity) return { error: `${fieldValue("Capacity/Type", capacity)} is only available for Asset Types FET, FP, and AC; received ${fieldValue("Asset Type", equipmentType)}.` };
   return {
     value: {
       equipment_type_id: type.id,

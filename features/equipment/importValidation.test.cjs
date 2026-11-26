@@ -9,6 +9,7 @@ const lookups = {
     { id: "fe-id", code: "FE", name: "Fire Extinguisher" },
     { id: "sd-id", code: "SD", name: "Smoke Detector" },
     { id: "fet-id", code: "FET", name: "Fire Equipment" },
+    { id: "fp-id", code: "FP", name: "Fire Pump" },
   ],
   typeCodes: [{ code: "AC" }, { code: "FET" }, { code: "FP" }, { code: "SD" }, { code: "FE" }, { code: "OLD", is_active: false }],
   statuses: [{ code: "OPERATIONAL" }],
@@ -91,8 +92,9 @@ test("row validation errors include the offending field values", () => {
     assert.ok(validateImportRow(row, lookups).error.includes(expected), IMPORT_COLUMNS[index]);
   }
   const capacityRow = [...valid];
-  capacityRow[2] = "SD";
-  assert.match(validateImportRow(capacityRow, lookups).error, /Capacity\/Type \[1\.5 TON\].*Asset Type Code \[SD\]/);
+  capacityRow[0] = "Smoke Detector";
+  capacityRow[1] = "SD";
+  assert.match(validateImportRow(capacityRow, lookups).error, /Capacity\/Type \[1\.5 TON\].*Asset Type \[SD\]/);
   const refillRow = [...valid];
   refillRow[10] = "2026-02-28";
   assert.match(validateImportRow(refillRow, lookups).error, /Refill Date CO2 \[2026-02-28\].*Asset Type \[AC\]/);
@@ -134,16 +136,20 @@ test("validates AMC and refill dates individually", () => {
   assert.equal(result.value.refill_date_dcp, "2026-11-21");
 });
 
-test("capacity is only accepted for Asset Type Codes FET, FP, and AC", () => {
+test("capacity is only accepted for Asset Types FET, FP, and AC", () => {
   const row = [...valid];
-  for (const code of ["FET", "FP", " ac "]) {
-    row[2] = code;
+  row[2] = "SD";
+  for (const [category, type] of [["Fire Equipment", "FET"], ["Fire Pump", "FP"], ["Air Conditioner", " ac "]]) {
+    row[0] = category;
+    row[1] = type;
     assert.equal(validateImportRow(row, lookups).value.capacity_type, "1.5 TON");
   }
-  row[2] = "SD";
+  row[0] = "Smoke Detector";
+  row[1] = "SD";
+  row[2] = "AC";
   assert.match(validateImportRow(row, lookups).error, /Capacity\/Type/);
   row[9] = "";
-  assert.equal(validateImportRow(row, lookups).value.equipment_type_code, "SD");
+  assert.equal(validateImportRow(row, lookups).value.equipment_type_code, "AC");
   row[2] = "OLD";
   assert.equal(validateImportRow(row, lookups).value.equipment_type_code, "OLD");
 });
