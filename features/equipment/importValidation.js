@@ -13,8 +13,6 @@ export const IMPORT_COLUMNS = [
   "Refill Date DCP [YYYY-MM-DD]",
 ];
 
-export const IMPORT_LIMIT = 200;
-
 export function importAssetKey(typeCode, unitNumber) {
   return `${String(typeCode ?? "").trim().toUpperCase()}|${Number(unitNumber)}`;
 }
@@ -56,7 +54,7 @@ export function validateImportRow(row, lookups) {
   const longIndex = cells.findIndex((value) => value.length > 255);
   if (longIndex !== -1) return { error: `${fieldValue(IMPORT_COLUMNS[longIndex], cells[longIndex])} must not exceed 255 characters.` };
   const [category, equipmentType, typeCode, name, siteCode, roomArea, statusCode, frequencyCode, amcDate, capacity, refillCo2, refillDcp] = cells;
-  const missingFields = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((index) => !cells[index]);
+  const missingFields = [0, 1, 3, 4, 5, 6, 7, 8].filter((index) => !cells[index]);
   if (missingFields.length) {
     return { error: `${missingFields.map((index) => fieldValue(IMPORT_COLUMNS[index], cells[index])).join(", ")} required.` };
   }
@@ -73,8 +71,6 @@ export function validateImportRow(row, lookups) {
   if (normalizedKey(categoryType.name) !== normalizedKey(type.name)) {
     return { error: `${fieldValue("Asset Category", category)} and ${fieldValue("Asset Type", equipmentType)} must refer to the same equipment type.` };
   }
-  const assetTypeCode = lookups.typeCodes.find((item) => normalizedTypeCode(item.code) === normalizedTypeCode(typeCode));
-  if (!assetTypeCode) return { error: `${fieldValue("Asset Type Code", typeCode)} does not exist. Add the code first.` };
   const matchingSites = lookups.locations.filter((item) => normalizedKey(item.site_code) === normalizedKey(siteCode));
   if (!matchingSites.length) return { error: `${fieldValue("Site Code", siteCode)} does not exist. Add the site first.` };
   const location = matchingSites.find((item) => normalizedKey(item.room_area) === normalizedKey(roomArea)) ?? matchingSites[0];
@@ -89,17 +85,17 @@ export function validateImportRow(row, lookups) {
   const typeName = type.name?.trim().toLowerCase();
   const code = type.code.trim().toUpperCase();
   const isExtinguisher = typeName === "fire extinguisher" || code === "FE";
-  const hasCapacity = ["fet", "fp", "ac"].includes(normalizedTypeCode(equipmentType));
+  const hasCapacity = ["air conditioner", "fire pump & water tank", "fire extinguisher trolley points"].includes(normalizedKey(category));
   if ((refillCo2 || refillDcp) && !isExtinguisher) {
     const refillValues = [refillCo2 && fieldValue("Refill Date CO2", refillCo2), refillDcp && fieldValue("Refill Date DCP", refillDcp)].filter(Boolean);
     return { error: `${refillValues.join(", ")} only available for fire extinguishers; ${fieldValue("Asset Type", equipmentType)} is not a fire extinguisher.` };
   }
-  if (capacity && !hasCapacity) return { error: `${fieldValue("Capacity/Type", capacity)} is only available for Asset Types FET, FP, and AC; received ${fieldValue("Asset Type", equipmentType)}.` };
+  if (capacity && !hasCapacity) return { error: `${fieldValue("Capacity/Type", capacity)} is only available for Asset Categories Air Conditioner, Fire Pump & Water Tank, and Fire Extinguisher Trolley Points; received ${fieldValue("Asset Category", category)}.` };
   return {
     value: {
       equipment_type_id: type.id,
       equipment_type: type.code,
-      equipment_type_code: assetTypeCode.code.trim().toUpperCase(),
+      equipment_type_code: (typeCode || type.code).trim().toUpperCase(),
       name,
       site_code: location.site_code,
       site_name: location.site_name,
@@ -112,4 +108,20 @@ export function validateImportRow(row, lookups) {
       refill_date_dcp: refillDcp,
     },
   };
+}
+
+export function validateImportRows(rows, lookups) {
+  const assets = [];
+  const errors = [];
+  for (const row of rows) {
+    const rowNumber = Number(row?.rowNumber);
+    if (!Number.isSafeInteger(rowNumber) || rowNumber < 2) throw new Error("Invalid spreadsheet row number.");
+    const validation = validateImportRow(row.values, lookups);
+    if (validation.error) {
+      errors.push({ row: rowNumber, status: "Rejected", message: validation.error });
+    } else {
+      assets.push({ row: rowNumber, asset: validation.value });
+    }
+  }
+  return { assets: errors.length ? [] : assets, errors };
 }

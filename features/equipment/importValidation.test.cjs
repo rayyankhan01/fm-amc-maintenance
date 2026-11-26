@@ -1,24 +1,53 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { validateImportRow, importAssetKey, IMPORT_COLUMNS } = require("./importValidation.js");
+const { validateImportRow, validateImportRows, importAssetKey, IMPORT_COLUMNS } = require("./importValidation.js");
 const { createEquipmentImportBatch, getNextUnitNumber, isEquipmentImportBatchOwner } = require("./api.js");
+const { importErrorDetails } = require("../../lib/userError.js");
+const { getImportLimit } = require("./importConfig.js");
 
 const lookups = {
   types: [
     { id: "ac-id", code: "AC", name: "Air Conditioner" },
     { id: "fe-id", code: "FE", name: "Fire Extinguisher" },
     { id: "sd-id", code: "SD", name: "Smoke Detector" },
-    { id: "fet-id", code: "FET", name: "Fire Equipment" },
-    { id: "fp-id", code: "FP", name: "Fire Pump" },
+    { id: "fet-id", code: "FET", name: "Fire Extinguisher Trolley Points" },
+    { id: "fp-id", code: "FP&WT", name: "Fire Pump & Water Tank" },
   ],
-  typeCodes: [{ code: "AC" }, { code: "FET" }, { code: "FP" }, { code: "SD" }, { code: "FE" }, { code: "OLD", is_active: false }],
   statuses: [{ code: "OPERATIONAL" }],
   frequencies: [{ code: "MONTHLY", interval_days: 30 }],
   locations: [{ site_code: "W3", site_name: "Warsan", room_area: "Room 1" }],
 };
 const valid = ["Air Conditioner", "AC", "AC", "Split AC", "W3", "Room 1", "OPERATIONAL", "MONTHLY", "2026-02-28", "1.5 TON", "", ""];
 
-test("template validates category name, type code and site code", () => {
+test("import limit uses a positive whole-number environment setting", () => {
+  assert.equal(getImportLimit(""), 200);
+  assert.equal(getImportLimit(" 350 "), 350);
+  for (const value of ["0", "-1", "1.5", "abc", "9007199254740992"]) {
+    assert.throws(() => getImportLimit(value), /ASSET_IMPORT_LIMIT/);
+  }
+});
+
+test("validates every spreadsheet row before importing", () => {
+  const invalid = [...valid];
+  invalid[4] = "Unknown";
+  const rows = Array.from({ length: 11 }, (_, index) => ({ rowNumber: index + 2, values: index === 10 ? invalid : [...valid] }));
+  const result = validateImportRows(rows, lookups);
+  assert.equal(result.assets.length, 0);
+  assert.equal(result.errors.length, 1);
+  assert.equal(result.errors[0].row, 12);
+  assert.match(result.errors[0].message, /Site Code \[Unknown\]/);
+  const validResult = validateImportRows(rows.slice(0, 10), lookups);
+  assert.equal(validResult.assets.length, 10);
+  assert.deepEqual(validResult.errors, []);
+});
+
+test("import errors include application and database details", () => {
+  assert.equal(importErrorDetails(new Error("Site Name already uses another Site Location.")), "Site Name already uses another Site Location.");
+  assert.equal(importErrorDetails({ message: "duplicate key", code: "23505", details: "Key already exists.", hint: "Use a different value." }), "duplicate key Code: 23505 Details: Key already exists. Hint: Use a different value.");
+  assert.equal(importErrorDetails(null), "Unable to complete the import.");
+});
+
+test("template validates category, asset type and site code", () => {
   assert.equal(IMPORT_COLUMNS.length, valid.length);
   assert.equal(IMPORT_COLUMNS[3], "Asset Name");
   assert.equal(IMPORT_COLUMNS[4], "Site Code");
@@ -32,6 +61,16 @@ test("template validates category name, type code and site code", () => {
   assert.equal(result.value.site_code, "W3");
   assert.equal(result.value.site_name, "Warsan");
   assert.equal(result.value.unit_number, undefined);
+});
+
+test("uses Asset Type when Asset Type Code is blank", () => {
+  const row = [...valid];
+  row[2] = " new-code ";
+  assert.equal(validateImportRow(row, lookups).value.equipment_type_code, "NEW-CODE");
+  for (const value of ["", " "]) {
+    row[2] = value;
+    assert.equal(validateImportRow(row, lookups).value.equipment_type_code, "AC");
+  }
 });
 
 test("matches a multiword asset type code despite copied spreadsheet whitespace", () => {
@@ -52,7 +91,6 @@ test("validates category, type, status and frequency against configuration", () 
     [0, "Unknown", /Add the category/],
     [1, "Unknown", /Asset Type \[Unknown\] does not match an active code.*"AC"/],
     [1, "SD", /same equipment type/],
-    [2, "Unknown", /Asset Type Code \[Unknown\] does not exist/],
     [6, "Unknown", /Add the status/],
     [7, "Unknown", /Add the frequency/],
   ]) {
@@ -78,7 +116,6 @@ test("row validation errors include the offending field values", () => {
   for (const [index, value, expected] of [
     [0, "Unknown category", "Asset Category [Unknown category]"],
     [1, "Unknown type", "Asset Type [Unknown type]"],
-    [2, "Unknown code", "Asset Type Code [Unknown code]"],
     [4, "Unknown site", "Site Code [Unknown site]"],
     [5, "", "Room/Area [empty]"],
     [6, "Unknown status", "Asset Status [Unknown status]"],
@@ -94,7 +131,7 @@ test("row validation errors include the offending field values", () => {
   const capacityRow = [...valid];
   capacityRow[0] = "Smoke Detector";
   capacityRow[1] = "SD";
-  assert.match(validateImportRow(capacityRow, lookups).error, /Capacity\/Type \[1\.5 TON\].*Asset Type \[SD\]/);
+  assert.match(validateImportRow(capacityRow, lookups).error, /Capacity\/Type \[1\.5 TON\].*Asset Category \[Smoke Detector\]/);
   const refillRow = [...valid];
   refillRow[10] = "2026-02-28";
   assert.match(validateImportRow(refillRow, lookups).error, /Refill Date CO2 \[2026-02-28\].*Asset Type \[AC\]/);
@@ -136,14 +173,18 @@ test("validates AMC and refill dates individually", () => {
   assert.equal(result.value.refill_date_dcp, "2026-11-21");
 });
 
-test("capacity is only accepted for Asset Types FET, FP, and AC", () => {
+test("capacity is only accepted for the permitted Asset Categories", () => {
   const row = [...valid];
   row[2] = "SD";
-  for (const [category, type] of [["Fire Equipment", "FET"], ["Fire Pump", "FP"], ["Air Conditioner", " ac "]]) {
+  for (const [category, type] of [["Fire Extinguisher Trolley Points", "FET"], ["Fire Pump & Water Tank", "FP&WT"], [" air conditioner ", " ac "]]) {
     row[0] = category;
     row[1] = type;
     assert.equal(validateImportRow(row, lookups).value.capacity_type, "1.5 TON");
   }
+  row[0] = "Air Conditioner";
+  row[1] = "COOLING";
+  const alternateType = { ...lookups, types: [...lookups.types, { id: "cooling-id", code: "COOLING", name: "Air Conditioner" }] };
+  assert.equal(validateImportRow(row, alternateType).value.capacity_type, "1.5 TON");
   row[0] = "Smoke Detector";
   row[1] = "SD";
   row[2] = "AC";

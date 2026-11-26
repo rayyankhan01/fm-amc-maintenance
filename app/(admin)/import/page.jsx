@@ -1,5 +1,6 @@
 import { Container, Stack, Typography } from "@mui/material";
 import { requireRole } from "@/lib/auth";
+import { getImportLimit } from "@/features/equipment/importConfig";
 import AssetImport from "./AssetImport";
 
 export default async function ImportPage() {
@@ -8,7 +9,7 @@ export default async function ImportPage() {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Stack spacing={3}>
         <Typography variant="h4">Import assets</Typography>
-        <AssetImport />
+        <AssetImport importLimit={getImportLimit()} />
       </Stack>
     </Container>
   );

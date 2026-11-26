@@ -8,8 +8,8 @@ import {
   Alert, Box, Button, LinearProgress, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Typography,
 } from "@mui/material";
-import { importAdminEquipment, startAdminEquipmentImport } from "@/features/admin/commands";
-import { IMPORT_COLUMNS, IMPORT_LIMIT } from "@/features/equipment/importValidation";
+import { importAdminEquipment } from "@/features/admin/commands";
+import { IMPORT_COLUMNS } from "@/features/equipment/importValidation";
 
 const DATE_COLUMNS = new Set([8, 10, 11]);
 
@@ -24,7 +24,7 @@ function dateCell(value, date1904) {
   return `${String(date.y).padStart(4, "0")}-${String(date.m).padStart(2, "0")}-${String(date.d).padStart(2, "0")}`;
 }
 
-export default function AssetImport() {
+export default function AssetImport({ importLimit }) {
   const [file, setFile] = useState(null);
   const [results, setResults] = useState([]);
   const [error, setError] = useState("");
@@ -53,13 +53,12 @@ export default function AssetImport() {
       return;
     }
     setBusy(true);
-    let completed = 0;
     try {
-      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, sheetRows: IMPORT_LIMIT + 2 });
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, sheetRows: importLimit + 2 });
       const sheet = workbook.Sheets["Assets"];
       if (!sheet || !sheet["!ref"]) throw new Error(`Spreadsheet [${file.name}] must contain an Assets sheet from the template.`);
       const fullRange = XLSX.utils.decode_range(sheet["!fullref"] || sheet["!ref"]);
-      if (fullRange.e.r > IMPORT_LIMIT) throw new Error(`Spreadsheet [${file.name}] contains ${fullRange.e.r} asset rows; the maximum is ${IMPORT_LIMIT}.`);
+      if (fullRange.e.r > importLimit) throw new Error(`Spreadsheet [${file.name}] contains ${fullRange.e.r} asset rows; the maximum is ${importLimit}.`);
       if (fullRange.e.c >= IMPORT_COLUMNS.length) throw new Error(`Spreadsheet [${file.name}] contains extra columns. Remove columns that are not in the template.`);
       const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "", blankrows: true });
       const headers = grid[0] ?? [];
@@ -83,15 +82,12 @@ export default function AssetImport() {
         rows.push({ rowNumber: index + 1, values });
       }
       if (!rows.length) throw new Error(`Spreadsheet [${file.name}] does not contain any asset rows.`);
-      const importBatchNo = await startAdminEquipmentImport();
-      for (let index = 0; index < rows.length; index += 10) {
-        const batch = await importAdminEquipment(rows.slice(index, index + 10), importBatchNo);
-        completed += batch.length;
-        setResults((current) => [...current, ...batch]);
-        setProgress(Math.round((completed / rows.length) * 100));
-      }
+      const result = await importAdminEquipment(rows);
+      if (result.results) setResults(result.results);
+      if (result.error) throw new Error(result.error);
+      setProgress(100);
     } catch (importError) {
-      setError(completed ? `Import stopped after ${completed} rows. Check the results before retrying.` : (importError.message || "Unable to read the spreadsheet."));
+      setError(importError.message || "Unable to read the spreadsheet.");
     } finally {
       setBusy(false);
     }
@@ -105,9 +101,10 @@ export default function AssetImport() {
         <Typography variant="body2">Please follow these guidelines before uploading the Excel file:</Typography>
         <Box component="ul" sx={{ pl: 3, mb: 0 }}>
           <Typography component="li" variant="body2">Download the Excel template and enter the asset details in the respective columns.</Typography>
-          <Typography component="li" variant="body2">All columns are mandatory except Capacity/Type, Refill Date CO2, and Refill Date DCP.</Typography>
+          <Typography component="li" variant="body2">All columns are mandatory except Asset Type Code, Capacity/Type, Refill Date CO2, and Refill Date DCP.</Typography>
+          <Typography component="li" variant="body2">If Asset Type Code is blank, Asset Type is used for the asset ID.</Typography>
           <Typography component="li" variant="body2">Enter dates in YYYY-MM-DD format.</Typography>
-          <Typography component="li" variant="body2">Asset Category, Asset Type Code, Site Code and Asset Type must already be available in the application.</Typography>
+          <Typography component="li" variant="body2">Asset Category, Site Code and Asset Type must already be available in the application.</Typography>
           <Typography component="li" variant="body2">Do not change the Excel column headers or template format.</Typography>
           <Typography component="li" variant="body2">Ensure all mandatory fields are completed before uploading.</Typography>
           <Typography component="li" variant="body2">Once completed, click Choose Spreadsheet to select the Excel file, then click Import Assets to upload.</Typography>
