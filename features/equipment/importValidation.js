@@ -54,7 +54,7 @@ export function validateImportRow(row, lookups) {
   const longIndex = cells.findIndex((value) => value.length > 255);
   if (longIndex !== -1) return { error: `${fieldValue(IMPORT_COLUMNS[longIndex], cells[longIndex])} must not exceed 255 characters.` };
   const [category, equipmentType, typeCode, name, siteCode, roomArea, statusCode, frequencyCode, amcDate, capacity, refillCo2, refillDcp] = cells;
-  const missingFields = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((index) => !cells[index]);
+  const missingFields = [0, 1, 3, 4, 5, 6, 7, 8].filter((index) => !cells[index]);
   if (missingFields.length) {
     return { error: `${missingFields.map((index) => fieldValue(IMPORT_COLUMNS[index], cells[index])).join(", ")} required.` };
   }
@@ -71,8 +71,6 @@ export function validateImportRow(row, lookups) {
   if (normalizedKey(categoryType.name) !== normalizedKey(type.name)) {
     return { error: `${fieldValue("Asset Category", category)} and ${fieldValue("Asset Type", equipmentType)} must refer to the same equipment type.` };
   }
-  const assetTypeCode = lookups.typeCodes.find((item) => normalizedTypeCode(item.code) === normalizedTypeCode(typeCode));
-  if (!assetTypeCode) return { error: `${fieldValue("Asset Type Code", typeCode)} does not exist. Add the code first.` };
   const matchingSites = lookups.locations.filter((item) => normalizedKey(item.site_code) === normalizedKey(siteCode));
   if (!matchingSites.length) return { error: `${fieldValue("Site Code", siteCode)} does not exist. Add the site first.` };
   const location = matchingSites.find((item) => normalizedKey(item.room_area) === normalizedKey(roomArea)) ?? matchingSites[0];
@@ -97,7 +95,7 @@ export function validateImportRow(row, lookups) {
     value: {
       equipment_type_id: type.id,
       equipment_type: type.code,
-      equipment_type_code: assetTypeCode.code.trim().toUpperCase(),
+      equipment_type_code: (typeCode || type.code).trim().toUpperCase(),
       name,
       site_code: location.site_code,
       site_name: location.site_name,

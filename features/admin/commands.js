@@ -272,7 +272,7 @@ async function importEquipmentRows(supabase, profileId, rows) {
     if (data.length < 500) break;
   }
 
-  const lookups = { types: types.data.filter((type) => type.is_active), typeCodes: types.data, statuses: statuses.data, frequencies: frequencies.data, locations };
+  const lookups = { types: types.data.filter((type) => type.is_active), statuses: statuses.data, frequencies: frequencies.data, locations };
   const { assets, errors } = validateImportRows(rows, lookups);
   if (errors.length) return { results: errors, error: "No assets were imported. Correct the rejected rows and try again." };
 

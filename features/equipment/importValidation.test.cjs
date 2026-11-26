@@ -13,7 +13,6 @@ const lookups = {
     { id: "fet-id", code: "FET", name: "Fire Extinguisher Trolley Points" },
     { id: "fp-id", code: "FP&WT", name: "Fire Pump & Water Tank" },
   ],
-  typeCodes: [{ code: "AC" }, { code: "FET" }, { code: "FP" }, { code: "SD" }, { code: "FE" }, { code: "OLD", is_active: false }],
   statuses: [{ code: "OPERATIONAL" }],
   frequencies: [{ code: "MONTHLY", interval_days: 30 }],
   locations: [{ site_code: "W3", site_name: "Warsan", room_area: "Room 1" }],
@@ -48,7 +47,7 @@ test("import errors include application and database details", () => {
   assert.equal(importErrorDetails(null), "Unable to complete the import.");
 });
 
-test("template validates category name, type code and site code", () => {
+test("template validates category, asset type and site code", () => {
   assert.equal(IMPORT_COLUMNS.length, valid.length);
   assert.equal(IMPORT_COLUMNS[3], "Asset Name");
   assert.equal(IMPORT_COLUMNS[4], "Site Code");
@@ -62,6 +61,16 @@ test("template validates category name, type code and site code", () => {
   assert.equal(result.value.site_code, "W3");
   assert.equal(result.value.site_name, "Warsan");
   assert.equal(result.value.unit_number, undefined);
+});
+
+test("uses Asset Type when Asset Type Code is blank", () => {
+  const row = [...valid];
+  row[2] = " new-code ";
+  assert.equal(validateImportRow(row, lookups).value.equipment_type_code, "NEW-CODE");
+  for (const value of ["", " "]) {
+    row[2] = value;
+    assert.equal(validateImportRow(row, lookups).value.equipment_type_code, "AC");
+  }
 });
 
 test("matches a multiword asset type code despite copied spreadsheet whitespace", () => {
@@ -82,7 +91,6 @@ test("validates category, type, status and frequency against configuration", () 
     [0, "Unknown", /Add the category/],
     [1, "Unknown", /Asset Type \[Unknown\] does not match an active code.*"AC"/],
     [1, "SD", /same equipment type/],
-    [2, "Unknown", /Asset Type Code \[Unknown\] does not exist/],
     [6, "Unknown", /Add the status/],
     [7, "Unknown", /Add the frequency/],
   ]) {
@@ -108,7 +116,6 @@ test("row validation errors include the offending field values", () => {
   for (const [index, value, expected] of [
     [0, "Unknown category", "Asset Category [Unknown category]"],
     [1, "Unknown type", "Asset Type [Unknown type]"],
-    [2, "Unknown code", "Asset Type Code [Unknown code]"],
     [4, "Unknown site", "Site Code [Unknown site]"],
     [5, "", "Room/Area [empty]"],
     [6, "Unknown status", "Asset Status [Unknown status]"],
